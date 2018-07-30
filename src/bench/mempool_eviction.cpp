@@ -16,8 +16,7 @@ static void AddTx(const CTransactionRef &tx, const Amount &nFee,
     bool spendsCoinbase = false;
     unsigned int sigOpCost = 4;
     LockPoints lp;
-    pool.addUnchecked(tx->GetId(),
-                      CTxMemPoolEntry(tx, nFee, nTime, nHeight, spendsCoinbase,
+    pool.addUnchecked(CTxMemPoolEntry(tx, nFee, nTime, nHeight, spendsCoinbase,
                                       sigOpCost, lp));
 }
 

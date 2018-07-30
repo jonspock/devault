@@ -2275,11 +2275,11 @@ XXXXX - Partial upgrade of wallet stuff
       [tests] remove test_bitcoin.h dependency on txmempool.h
       Fix -Wshadow warnings
       test: add "diamond" unit test to MempoolAncestryTests
-      scripted-diff: Remove unused first argument to addUnchecked
+#     scripted-diff: Remove unused first argument to addUnchecked
 ##### Free BerkeleyEnvironment instances when not in use
       Fix the abc-p2p-compactblocks when running whith UBSAN
       Fix extra parenthesis in python .format()
-      Mark CTxMemPoolEntry members that should not be modified const
+#     Mark CTxMemPoolEntry members that should not be modified const
       fix misc places that refer to virtual transaction size
       Reintroduce IsSolvable
       Merge #13002: Do not treat bare multisig outputs as IsMine unless watched
@@ -2300,7 +2300,7 @@ XXXXX - Partial upgrade of wallet stuff
       [SECP256K1] Update Travis deprecated keywords
       [SECP256k1] Add the CMake/Ninja build to Travis
       [CMAKE] Add a check-extended target
-      Log env path in BerkeleyEnvironment::Flush
+#     Log env path in BerkeleyEnvironment::Flush
 XXXXX wallet: detecting duplicate wallet by comparing the db filename.
 ##### [bugfix] wallet: Fix duplicate fileid detection
 ##### [wallet] Reopen CDBEnv after encryption instead of shutting down
