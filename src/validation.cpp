@@ -814,7 +814,7 @@ static bool AcceptToMemoryPoolWorker(
         }
 
         // Store transaction in memory.
-        pool.addUnchecked(txid, entry, setAncestors);
+        pool.addUnchecked(entry, setAncestors);
 
         // Add memory address index
         if (fAddressIndex) {
