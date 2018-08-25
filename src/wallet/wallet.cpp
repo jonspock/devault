@@ -5807,11 +5807,10 @@ std::tuple<CHDChain,CHDChain> CWallet::GetHDChains() const {
 std::tuple<bool, CKey, CPubKey, bool> CWallet::ExtractFromBLSScript(const CScript &scriptPubKey) const {
     CKey key;
     CPubKey pubkey;
-    txnouttype whichTypeRet;
     std::vector<std::vector<uint8_t>> vSolutions;
-    bool ok = Solver(scriptPubKey, whichTypeRet, vSolutions);
-    if (!ok) {
-        return std::tuple(ok, key, pubkey, whichTypeRet == TX_BLSPUBKEY);
+    txnouttype whichTypeRet = Solver(scriptPubKey, vSolutions);
+    if (whichTypeRet == TX_NONSTANDARD) {
+        return std::tuple(false, key, pubkey, false);
     }
     
     BKeyID keyID1;
