@@ -16,10 +16,9 @@
 
 std::vector<uint8_t> ExtractPubKeyFromBLSScript(const CScript &scriptPubKey) {
     std::vector<uint8_t> pubkey;
-    txnouttype whichTypeRet;
     std::vector<std::vector<uint8_t>> vSolutions;
-    bool ok = Solver(scriptPubKey, whichTypeRet, vSolutions);
-    if (!ok || whichTypeRet != TX_BLSPUBKEY) {
+    txnouttype whichTypeRet = Solver(scriptPubKey, vSolutions);
+    if (whichTypeRet == TX_NONSTANDARD || whichTypeRet != TX_BLSPUBKEY) {
         return pubkey; // emtpy value => problem
     }
     return vSolutions[0];
