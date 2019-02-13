@@ -647,11 +647,11 @@ bool FinalizeBlockAndInvalidate(const Config &config, CValidationState &state,
 
 /** Mark a block as invalid. */
 bool InvalidateBlock(const Config &config, CValidationState &state,
-                     CBlockIndex *pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+                     CBlockIndex *pindex);
 
 /** Park a block. */
 bool ParkBlock(const Config &config, CValidationState &state,
-               CBlockIndex *pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+               CBlockIndex *pindex);
 
 /** Remove invalidity status from a block and its descendants. */
 bool ResetBlockFailureFlags(CBlockIndex *pindex) EXCLUSIVE_LOCKS_REQUIRED(cs_main);

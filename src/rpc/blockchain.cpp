@@ -1727,15 +1727,15 @@ static UniValue invalidateblock(const Config &config,
     const BlockHash hash(uint256S(strHash));
     CValidationState state;
 
+    CBlockIndex *pblockindex;
     {
         LOCK(cs_main);
-        if (mapBlockIndex.count(hash) == 0) {
+        pblockindex = LookupBlockIndex(hash);
+        if (!pblockindex) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
         }
-
-        CBlockIndex *pblockindex = mapBlockIndex[hash];
-        InvalidateBlock(config, state, pblockindex);
     }
+    InvalidateBlock(config, state, pblockindex);
 
     if (state.IsValid()) {
         ActivateBestChain(config, state);
@@ -1765,15 +1765,16 @@ UniValue parkblock(const Config &config, const JSONRPCRequest &request) {
     const BlockHash hash(uint256S(strHash));
     CValidationState state;
 
+    CBlockIndex *pblockindex;
     {
         LOCK(cs_main);
         if (mapBlockIndex.count(hash) == 0) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Block not found");
         }
 
-        CBlockIndex *pblockindex = mapBlockIndex[hash];
-        ParkBlock(config, state, pblockindex);
+        pblockindex = mapBlockIndex[hash];
     }
+    ParkBlock(config, state, pblockindex);
 
     if (state.IsValid()) {
         ActivateBestChain(config, state);
