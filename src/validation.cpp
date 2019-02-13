@@ -172,8 +172,7 @@ public:
     bool PreciousBlock(const Config &config, CValidationState &state,
                        CBlockIndex *pindex) LOCKS_EXCLUDED(cs_main);
     bool UnwindBlock(const Config &config, CValidationState &state,
-                     CBlockIndex *pindex, bool invalidate)
-        EXCLUSIVE_LOCKS_REQUIRED(cs_main);
+                     CBlockIndex *pindex, bool invalidate);
     bool ResetBlockFailureFlags(CBlockIndex *pindex)
         EXCLUSIVE_LOCKS_REQUIRED(cs_main);
     template <typename F>
@@ -3203,7 +3202,6 @@ bool PreciousBlock(const Config &config, CValidationState &state,
 
 bool CChainState::UnwindBlock(const Config &config, CValidationState &state,
                               CBlockIndex *pindex, bool invalidate) {
-    AssertLockHeld(cs_main);
 
     // We first disconnect backwards and then mark the blocks as invalid.
     // This prevents a case where pruned nodes may fail to invalidateblock
@@ -3260,6 +3258,7 @@ bool CChainState::UnwindBlock(const Config &config, CValidationState &state,
     }
 
     if (invalidate) {
+        LOCK(cs_main);
         InvalidChainFound(pindex);
     }
 

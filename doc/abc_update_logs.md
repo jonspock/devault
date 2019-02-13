@@ -2257,8 +2257,8 @@ XXXXX - Partial upgrade of wallet stuff
       Call FinalizeBlockAndInvalidate without cs_main held
       Add a script to generate sha256sums from Gitian output
       Release cs_main during InvalidateBlock iterations
-      Call InvalidateBlock without cs_main held
-      Call RewindBlockIndex without cs_main held
+#     Call InvalidateBlock without cs_main held
+#     Call RewindBlockIndex without cs_main held
 #     [wallet] Support creating a blank wallet
       add a flag that restricts sigChecks per-input
       save ScriptExecutionMetrics during CScriptCheck
@@ -2270,7 +2270,7 @@ XXXXX - Partial upgrade of wallet stuff
       [CMAKE] Add a check-upgrade-activated-extended target
       Merge #13988: Add checks for settxfee reasonableness
       Merge #13142: Separate IsMine from solvability
-      move ScriptExecutionMetrics to its own file
+#     move ScriptExecutionMetrics to its own file
 #     move MANDATORY_SCRIPT_VERIFY_FLAGS to policy.h
       [tests] remove test_bitcoin.h dependency on txmempool.h
       Fix -Wshadow warnings
