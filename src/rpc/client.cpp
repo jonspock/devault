@@ -55,6 +55,7 @@ static const CRPCConvertParam vRPCConvertParams[] = {
     {"getblockbynumber", 0, "height"},
     {"getblockbynumber", 1, "verbosity"},
     {"getdifficulties", 1, "height"},
+    {"rawdifficulties", 1, "height"},
     {"getaddressbalance", 1, "address"},
 #ifdef EXTRA_INDEXES    
     {"getblockhashes", 0 , "high"},

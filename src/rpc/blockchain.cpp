@@ -821,6 +821,59 @@ static UniValue getblockheader(const Config &config,
     return blockheaderToJSON(chainActive.Tip(), pblockindex);
 }
 
+static UniValue rawdifficulties(const Config &config, const JSONRPCRequest &request) {
+  if (request.fHelp || request.params.size() < 1)
+    throw std::runtime_error(
+                             "getdifficulties \"filename\" \"blocks\" \n"
+                             "\nWrite the last \"blocks\" difficulty values to a file for analysis.\n"
+                             "\nArguments:\n"
+                             "1. \"filename\"       (string, required) The filename where results are written to\n"
+                             "\nExamples:\n" +
+                             HelpExampleCli("getdifficulties", "\"diff.txt") +
+                             HelpExampleRpc("getdifficulties", "\"diff200.txt"));
+
+    LOCK(cs_main);
+    fs::path filepath = request.params[0].get_str();
+    int nLastHeight = chainActive.Height();
+    int nHeight=1;
+
+    filepath = fs::absolute(filepath);
+    
+    std::ofstream file;
+    file.open(filepath.string().c_str());
+    if (!file.is_open()) {
+        throw JSONRPCError(RPC_INVALID_PARAMETER,
+                           "Cannot open getdifficulties dump file");
+    }
+
+    UniValue reply(UniValue::VOBJ);
+    reply.pushKV("filename", filepath.string());
+
+    for (int i=nHeight;i<=nLastHeight;i++) {
+      CBlockIndex *pblockindex = chainActive[i];
+      if (fHavePruned && !pblockindex->nStatus.hasData() &&
+          pblockindex->nTx > 0) {
+        throw JSONRPCError(RPC_MISC_ERROR, "Block not available (pruned data)");
+      }
+      CBlock block;
+      if (!ReadBlockFromDisk(block, pblockindex, config)) {
+        // Block not found on disk. This could be because we have the block
+        // header in our index but don't have the block (for example if a
+        // non-whitelisted node sends us an unrequested long chain of valid
+        // blocks, we add the headers to our index, but don't accept the block).
+        throw JSONRPCError(RPC_MISC_ERROR, "Block not found on disk");
+      }
+
+      // We grab Height + double precision Difficulty from the block
+      // and save in a file
+      
+      file << i << std::hex << " " << pblockindex->nBits << std::dec << " " << pblockindex->nBits << std::dec << "\n";
+    }
+    file.close();
+
+    return reply;
+}
+
 static UniValue getdifficulties(const Config &config, const JSONRPCRequest &request) {
   if (request.fHelp || request.params.size() < 1)
     throw std::runtime_error(
@@ -2450,6 +2503,7 @@ static const ContextFreeRPCCommand commands[] = {
     { "blockchain",         "getblock",               getblock,               {"blockhash","verbosity|verbose"} },
     { "blockchain",         "getblockhash",           getblockhash,           {"height"} },
     { "blockchain",         "getblockbynumber",       getblockbynumber,       {"height"} },
+    { "blockchain",         "rawdifficulties",        rawdifficulties,        {"height"} },
     { "blockchain",         "getdifficulties",        getdifficulties,        {"height"} },
     { "blockchain",         "getblockheader",         getblockheader,         {"blockhash","verbose"} },
     { "blockchain",         "getblockstats",          getblockstats,          {"hash_or_height","stats"} },
