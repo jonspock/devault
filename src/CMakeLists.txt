@@ -222,6 +222,11 @@ if (SODIUM_FOUND)
   message(STATUS "Sodium include dir = ${sodium_INCLUDE_DIR}")
 endif()
 
+find_package(GMP REQUIRED)
+if (GMP_FOUND)
+  message(STATUS "Found libgmp")
+endif()
+
 
 set(THREADS_PREFER_PTHREAD_FLAG ON)
 find_package(Threads)
