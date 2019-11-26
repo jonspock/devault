@@ -484,7 +484,7 @@ TEST_CASE("coin_serialization") {
   BOOST_CHECK_EQUAL(c1.GetTxOut().nValue, Amount(60000000000));
   BOOST_CHECK_EQUAL(
       HexStr(c1.GetTxOut().scriptPubKey),
-      HexStr(GetScriptForDestination(CKeyID(uint160(ParseHex("816115944e077fe7c803cfa57f29b36bf87c1d35"))))));
+      HexStr(GetScriptForDestination(CKeyID<0>(uint160(ParseHex("816115944e077fe7c803cfa57f29b36bf87c1d35"))))));
 
   // Good example
   CDataStream ss2(ParseHex("8ddf77bbd123008c988f1a4a4de2161e0f50aac7f17e7f9555caa4"), SER_DISK, CLIENT_VERSION);
@@ -495,7 +495,7 @@ TEST_CASE("coin_serialization") {
   BOOST_CHECK_EQUAL(c2.GetTxOut().nValue, Amount(110397));
   BOOST_CHECK_EQUAL(
       HexStr(c2.GetTxOut().scriptPubKey),
-      HexStr(GetScriptForDestination(CKeyID(uint160(ParseHex("8c988f1a4a4de2161e0f50aac7f17e7f9555caa4"))))));
+      HexStr(GetScriptForDestination(CKeyID<0>(uint160(ParseHex("8c988f1a4a4de2161e0f50aac7f17e7f9555caa4"))))));
 
   // Smallest possible example
   CDataStream ss3(ParseHex("000006"), SER_DISK, CLIENT_VERSION);

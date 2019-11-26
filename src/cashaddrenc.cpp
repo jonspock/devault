@@ -13,6 +13,7 @@
 #include <variant>
 #include <algorithm>
 
+
 namespace {
 
 // Convert the data part to a 5 bit representation.
@@ -69,9 +70,14 @@ class CashAddrEncoder  : public std::variant<std::string> {
 public:
     CashAddrEncoder(const CChainParams &p) : params(p) {}
 
-    std::string operator()(const CKeyID &id) const {
+    std::string operator()(const CKeyID<0> &id) const {
         std::vector<uint8_t> data = PackAddrData(id, PUBKEY_TYPE);
         return cashaddr::Encode(params.CashAddrPrefix(), data);
+    }
+
+    std::string operator()(const CKeyID<1> &id) const {
+        std::vector<uint8_t> data = PackAddrData(id, BLSPUBKEY_TYPE);
+        return cashaddr::Encode(params.BLSAddrPrefix(), data);
     }
 
     std::string operator()(const CScriptID &id) const {
@@ -90,16 +96,14 @@ class CashSecretAddrEncoder  : public std::variant<std::string> {
 public:
     CashSecretAddrEncoder(const CChainParams &p) : params(p) {}
 
-    std::string operator()(const CKeyID &id) const {
+    std::string operator()(const CKeyID<0> &id) const {
         std::vector<uint8_t> data = PackAddrData(id, SECRET_TYPE);
         return cashaddr::Encode(params.CashAddrSecretPrefix(), data);
     }
-  /*
-    std::string operator()(const CScriptID &id) const {
-        std::vector<uint8_t> data = PackAddrData(id, SCRIPT_TYPE);
-        return cashaddr::Encode(params.CashAddrPrefix(), data);
+    std::string operator()(const CKeyID<1> &id) const {
+        std::vector<uint8_t> data = PackAddrData(id, SECRET_TYPE);
+        return cashaddr::Encode(params.BLSAddrSecretPrefix(), data);
     }
-  */
     std::string operator()(const CNoDestination &) const { return ""; }
 
 private:
@@ -121,8 +125,10 @@ std::string EncodeCashAddr(const std::string &prefix,
 
 CTxDestination DecodeCashAddr(const std::string &addr,
                               const CChainParams &params) {
-    CashAddrContent content =
-        DecodeCashAddrContent(addr, params.CashAddrPrefix());
+    CashAddrContent content = DecodeCashAddrContent(addr, params.CashAddrPrefix());
+    if (content.hash.size() == 0) {
+        content = DecodeCashAddrContent(addr, params.BLSAddrPrefix());
+    }
     if (content.hash.size() == 0) {
         return CNoDestination{};
     }
@@ -196,7 +202,9 @@ CTxDestination DecodeCashAddrDestination(const CashAddrContent &content) {
 
     switch (content.type) {
         case PUBKEY_TYPE:
-            return CKeyID(hash);
+            return CKeyID<0>(hash);
+        case BLSPUBKEY_TYPE:
+            return CKeyID<1>(hash);
         case SCRIPT_TYPE:
             return CScriptID(hash);
         default:

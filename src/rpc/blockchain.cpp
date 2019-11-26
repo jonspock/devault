@@ -139,7 +139,7 @@ UniValue blockToDeltasJSON(const Config &config, const CBlock& block, const CBlo
 
                 if (GetSpentIndex(spentKey, spentInfo)) {
                     if (spentInfo.addressType == 1) {
-                        delta.push_back(Pair("address", EncodeCashAddr(CKeyID(spentInfo.addressHash),Params)));
+                        delta.push_back(Pair("address", EncodeCashAddr(CKeyID<0>(spentInfo.addressHash),Params)));
                     } else if (spentInfo.addressType == 2)  {
                         delta.push_back(Pair("address", EncodeCashAddr(CScriptID(spentInfo.addressHash),Params)));
                     } else {
@@ -173,7 +173,7 @@ UniValue blockToDeltasJSON(const Config &config, const CBlock& block, const CBlo
 
             } else if (out.scriptPubKey.IsPayToPublicKeyHash()) {
                 std::vector<unsigned char> hashBytes(out.scriptPubKey.begin()+3, out.scriptPubKey.begin()+23);
-                delta.push_back(Pair("address", EncodeCashAddr(CKeyID(uint160(hashBytes)), Params)));
+                delta.push_back(Pair("address", EncodeCashAddr(CKeyID<0>(uint160(hashBytes)), Params)));
             } else {
                 continue;
             }

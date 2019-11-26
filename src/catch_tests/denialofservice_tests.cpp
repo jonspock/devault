@@ -332,7 +332,7 @@ TEST_CASE("DoS_mapOrphans") {
     tx.vin[0].scriptSig << OP_1;
     tx.vout.resize(1);
     tx.vout[0].nValue = 1 * CENT;
-    tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetID());
+    tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetKeyID());
 
     AddOrphanTx(MakeTransactionRef(tx), i);
   }
@@ -346,7 +346,7 @@ TEST_CASE("DoS_mapOrphans") {
     tx.vin[0].prevout = COutPoint(txPrev->GetId(), 0);
     tx.vout.resize(1);
     tx.vout[0].nValue = 1 * CENT;
-    tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetID());
+    tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetKeyID());
     SignSignature(keystore, *txPrev, tx, 0, SigHashType());
 
     AddOrphanTx(MakeTransactionRef(tx), i);
@@ -359,7 +359,7 @@ TEST_CASE("DoS_mapOrphans") {
     CMutableTransaction tx;
     tx.vout.resize(1);
     tx.vout[0].nValue = 1 * CENT;
-    tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetID());
+    tx.vout[0].scriptPubKey = GetScriptForDestination(key.GetPubKey().GetKeyID());
     tx.vin.resize(2777);
     for (size_t j = 0; j < tx.vin.size(); j++) {
       tx.vin[j].prevout = COutPoint(txPrev->GetId(), j);

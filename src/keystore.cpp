@@ -15,12 +15,13 @@ bool CKeyStore::AddKey(const CKey &key) {
 
 // Remove key temporarily added for Sweep function
 bool CBasicKeyStore::RemoveKey(const CKey& key) {
-    return mapKeys.erase(key.GetPubKey().GetID());
+#pragma warning "must update for BLS when ready"
+    return mapKeys.erase(key.GetPubKey().GetKeyID());
 }
 
 void CBasicKeyStore::ImplicitlyLearnRelatedKeyScripts(const CPubKey &pubkey) {
     AssertLockHeld(cs_KeyStore);
-    CKeyID key_id = pubkey.GetID();
+    CKeyID<0> key_id = pubkey.GetKeyID();
     // We must actually know about this key already.
     assert(HaveKey(key_id) || mapWatchKeys.count(key_id));
     // This adds the redeemscripts necessary to detect alternative outputs using
@@ -34,8 +35,7 @@ void CBasicKeyStore::ImplicitlyLearnRelatedKeyScripts(const CPubKey &pubkey) {
     // Right now there are none so do nothing.
 }
 
-bool CBasicKeyStore::GetPubKey(const CKeyID &address,
-                               CPubKey &vchPubKeyOut) const {
+bool CBasicKeyStore::GetPubKey(const CKeyID<0> &address, CPubKey &vchPubKeyOut) const {
     CKey key;
     if (!GetKey(address, key)) {
         LOCK(cs_KeyStore);
@@ -49,35 +49,50 @@ bool CBasicKeyStore::GetPubKey(const CKeyID &address,
     vchPubKeyOut = key.GetPubKey();
     return true;
 }
+bool CBasicKeyStore::GetPubKey(const CKeyID<1> &address, CPubKey &vchPubKeyOut) const {
+    CKey key;
+    if (!GetKey(address, key)) {
+        LOCK(cs_KeyStore);
+        auto it = mapBLSWatchKeys.find(address);
+        if (it != mapBLSWatchKeys.end()) {
+            vchPubKeyOut = it->second;
+            return true;
+        }
+        return false;
+    }
+    vchPubKeyOut = key.GetPubKeyForBLS();
+    return true;
+}
 
 bool CBasicKeyStore::AddKeyPubKey(const CKey &key, const CPubKey &pubkey) {
     LOCK(cs_KeyStore);
-    mapKeys[pubkey.GetID()] = key;
+    mapKeys[pubkey.GetKeyID()] = key;
     ImplicitlyLearnRelatedKeyScripts(pubkey);
     return true;
 }
 
-bool CBasicKeyStore::HaveKey(const CKeyID &address) const {
+bool CBasicKeyStore::HaveKey(const CKeyID<0> &address) const {
     LOCK(cs_KeyStore);
     return mapKeys.count(address) > 0;
 }
 
-std::set<CKeyID> CBasicKeyStore::GetKeys() const {
+bool CBasicKeyStore::HaveKey(const CKeyID<1> &address) const {
     LOCK(cs_KeyStore);
-    std::set<CKeyID> set_address;
-    for (const auto &mi : mapKeys) {
-        set_address.insert(mi.first);
-    }
-    return set_address;
+    return false;
 }
 
-bool CBasicKeyStore::GetKey(const CKeyID &address, CKey &keyOut) const {
+bool CBasicKeyStore::GetKey(const CKeyID<0> &address, CKey &keyOut) const {
     LOCK(cs_KeyStore);
-    KeyMap::const_iterator mi = mapKeys.find(address);
+    auto mi = mapKeys.find(address);
     if (mi != mapKeys.end()) {
         keyOut = mi->second;
         return true;
     }
+    return false;
+}
+
+bool CBasicKeyStore::GetKey(const CKeyID<1> &address, CKey &keyOut) const {
+    LOCK(cs_KeyStore);
     return false;
 }
 
@@ -142,7 +157,7 @@ bool CBasicKeyStore::AddWatchOnly(const CScript &dest) {
     setWatchOnly.insert(dest);
     CPubKey pubKey;
     if (ExtractPubKey(dest, pubKey)) {
-        mapWatchKeys[pubKey.GetID()] = pubKey;
+        mapWatchKeys[pubKey.GetKeyID()] = pubKey;
         ImplicitlyLearnRelatedKeyScripts(pubKey);
     }
     return true;
@@ -153,7 +168,7 @@ bool CBasicKeyStore::RemoveWatchOnly(const CScript &dest) {
     setWatchOnly.erase(dest);
     CPubKey pubKey;
     if (ExtractPubKey(dest, pubKey)) {
-        mapWatchKeys.erase(pubKey.GetID());
+        mapWatchKeys.erase(pubKey.GetKeyID());
     }
     // Related CScripts are not removed; having superfluous scripts around is
     // harmless (see comment in ImplicitlyLearnRelatedKeyScripts).
@@ -169,4 +184,3 @@ bool CBasicKeyStore::HaveWatchOnly() const {
     LOCK(cs_KeyStore);
     return (!setWatchOnly.empty());
 }
-

@@ -101,9 +101,9 @@ TEST_CASE("key_test1") {
   const Config &config = GetConfig();
   const CChainParams &chainParams = config.GetChainParams();
 
-  BOOST_CHECK(DecodeDestination(addr1, chainParams) == CTxDestination(pubkey1.GetID()));
-  BOOST_CHECK(DecodeDestination(addr2, chainParams) == CTxDestination(pubkey2.GetID()));
-  BOOST_CHECK(DecodeDestination(addr3, chainParams) == CTxDestination(pubkey3.GetID()));
+  BOOST_CHECK(DecodeDestination(addr1, chainParams) == CTxDestination(pubkey1.GetKeyID()));
+  BOOST_CHECK(DecodeDestination(addr2, chainParams) == CTxDestination(pubkey2.GetKeyID()));
+  BOOST_CHECK(DecodeDestination(addr3, chainParams) == CTxDestination(pubkey3.GetKeyID()));
 
   for (int n = 0; n < 16; n++) {
     std::string strMsg = strprintf("Very secret message %i: 11", n);
@@ -149,24 +149,28 @@ TEST_CASE("key_test1") {
     BOOST_CHECK(rkey3 == pubkey3);
 
     // Schnorr signatures
+    bls::CPubKey bpubkey1 = key1.GetBLSPubKey();
+    bls::CPubKey bpubkey2 = key2.GetBLSPubKey();
+    bls::CPubKey bpubkey3 = key3.GetBLSPubKey();
+
 
     std::vector<uint8_t> ssign1, ssign2, ssign3;
 
-    BOOST_CHECK(key1.SignSchnorr(hashMsg, ssign1));
-    BOOST_CHECK(key2.SignSchnorr(hashMsg, ssign2));
-    BOOST_CHECK(key3.SignSchnorr(hashMsg, ssign3));
+    BOOST_CHECK(key1.SignBLS(hashMsg, ssign1));
+    BOOST_CHECK(key2.SignBLS(hashMsg, ssign2));
+    BOOST_CHECK(key3.SignBLS(hashMsg, ssign3));
 
-    BOOST_CHECK(pubkey1.VerifySchnorr(hashMsg, ssign1));
-    BOOST_CHECK(!pubkey1.VerifySchnorr(hashMsg, ssign2));
-    BOOST_CHECK(!pubkey1.VerifySchnorr(hashMsg, ssign3));
+    BOOST_CHECK(bpubkey1.Verify(hashMsg, ssign1));
+    BOOST_CHECK(!bpubkey1.Verify(hashMsg, ssign2));
+    BOOST_CHECK(!bpubkey1.Verify(hashMsg, ssign3));
 
-    BOOST_CHECK(!pubkey2.VerifySchnorr(hashMsg, ssign1));
-    BOOST_CHECK(pubkey2.VerifySchnorr(hashMsg, ssign2));
-    BOOST_CHECK(!pubkey2.VerifySchnorr(hashMsg, ssign3));
+    BOOST_CHECK(!bpubkey2.Verify(hashMsg, ssign1));
+    BOOST_CHECK(bpubkey2.Verify(hashMsg, ssign2));
+    BOOST_CHECK(!bpubkey2.Verify(hashMsg, ssign3));
 
-    BOOST_CHECK(!pubkey3.VerifySchnorr(hashMsg, ssign1));
-    BOOST_CHECK(!pubkey3.VerifySchnorr(hashMsg, ssign2));
-    BOOST_CHECK(pubkey3.VerifySchnorr(hashMsg, ssign3));
+    BOOST_CHECK(!bpubkey3.Verify(hashMsg, ssign1));
+    BOOST_CHECK(!bpubkey3.Verify(hashMsg, ssign2));
+    BOOST_CHECK(bpubkey3.Verify(hashMsg, ssign3));
 
     // Extract r value from ECDSA and Schnorr. Make sure they are
     // distinct (nonce reuse would be dangerous and can leak private key).
@@ -202,11 +206,11 @@ TEST_CASE("key_test1") {
 
   BOOST_CHECK(key2.SignCompact(hashMsg, detsig));
 
-  // Schnorr
-  BOOST_CHECK(key1.SignSchnorr(hashMsg, detsig));
-  BOOST_CHECK(key3.SignSchnorr(hashMsg, detsigc));
+  // BLS
+  BOOST_CHECK(key1.SignBLS(hashMsg, detsig));
+  BOOST_CHECK(key3.SignBLS(hashMsg, detsigc));
 
-  BOOST_CHECK(key2.SignSchnorr(hashMsg, detsig));
+  BOOST_CHECK(key2.SignBLS(hashMsg, detsig));
 }
 
 // BOOST_AUTO_TEST_SUITE_END()

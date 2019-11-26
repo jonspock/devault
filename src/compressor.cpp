@@ -8,7 +8,7 @@
 #include <pubkey.h>
 #include <script/standard.h>
 
-bool CScriptCompressor::IsToKeyID(CKeyID &hash) const {
+bool CScriptCompressor::IsToKeyID(CKeyID<0> &hash) const {
     if (script.size() == 25 && script[0] == OP_DUP && script[1] == OP_HASH160 &&
         script[2] == 20 && script[23] == OP_EQUALVERIFY &&
         script[24] == OP_CHECKSIG) {
@@ -43,7 +43,7 @@ bool CScriptCompressor::IsToPubKey(CPubKey &pubkey) const {
 }
 
 bool CScriptCompressor::Compress(std::vector<uint8_t> &out) const {
-    CKeyID keyID;
+    CKeyID<0> keyID;
     if (IsToKeyID(keyID)) {
         out.resize(21);
         out[0] = 0x00;
@@ -111,17 +111,7 @@ bool CScriptCompressor::Decompress(unsigned int nSize,
             return true;
         case 0x04:
         case 0x05:
-            uint8_t vch[33] = {};
-            vch[0] = nSize - 2;
-            memcpy(&vch[1], in.data(), 32);
-            CPubKey pubkey(&vch[0], &vch[33]);
-            if (!pubkey.Decompress()) return false;
-            assert(pubkey.size() == 65);
-            script.resize(67);
-            script[0] = 65;
-            memcpy(&script[1], pubkey.begin(), 65);
-            script[66] = OP_CHECKSIG;
-            return true;
+            return false;
     }
     return false;
 }

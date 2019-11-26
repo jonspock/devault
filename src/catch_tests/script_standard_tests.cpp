@@ -37,11 +37,11 @@ TEST_CASE("script_standard_Solver_success") {
 
   // TX_PUBKEYHASH
   s.clear();
-  s << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
+  s << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetKeyID()) << OP_EQUALVERIFY << OP_CHECKSIG;
   BOOST_CHECK(Solver(s, whichType, solutions));
   BOOST_CHECK_EQUAL(whichType, TX_PUBKEYHASH);
   BOOST_CHECK_EQUAL(solutions.size(), 1);
-  BOOST_CHECK(solutions[0] == ToByteVector(pubkeys[0].GetID()));
+  BOOST_CHECK(solutions[0] == ToByteVector(pubkeys[0].GetKeyID()));
 
   // TX_SCRIPTHASH
   CScript redeemScript(s); // initialize with leftover P2PKH script
@@ -84,7 +84,7 @@ TEST_CASE("script_standard_Solver_success") {
 
   // TX_WITNESS_V0_KEYHASH
   s.clear();
-  s << OP_0 << ToByteVector(pubkeys[0].GetID());
+  s << OP_0 << ToByteVector(pubkeys[0].GetKeyID());
   BOOST_CHECK(!Solver(s, whichType, solutions));
   BOOST_CHECK_EQUAL(whichType, TX_NONSTANDARD);
   BOOST_CHECK_EQUAL(solutions.size(), 0);
@@ -183,13 +183,13 @@ TEST_CASE("script_standard_ExtractDestination") {
   s.clear();
   s << ToByteVector(pubkey) << OP_CHECKSIG;
   BOOST_CHECK(ExtractDestination(s, address));
-  //    BOOST_CHECK(boost::get<CKeyID>(&address) && *boost::get<CKeyID>(&address) == pubkey.GetID());
+  //    BOOST_CHECK(boost::get<CKeyID<0>>(&address) && *boost::get<CKeyID<0>>(&address) == pubkey.GetKeyID());
 
   // TX_PUBKEYHASH
   s.clear();
-  s << OP_DUP << OP_HASH160 << ToByteVector(pubkey.GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
+  s << OP_DUP << OP_HASH160 << ToByteVector(pubkey.GetKeyID()) << OP_EQUALVERIFY << OP_CHECKSIG;
   BOOST_CHECK(ExtractDestination(s, address));
-  //    BOOST_CHECK(boost::get<CKeyID>(&address) && *boost::get<CKeyID>(&address) == pubkey.GetID());
+  //    BOOST_CHECK(boost::get<CKeyID<0>>(&address) && *boost::get<CKeyID<0>>(&address) == pubkey.GetKeyID());
 
   // TX_SCRIPTHASH
   CScript redeemScript(s); // initialize with leftover P2PKH script
@@ -241,16 +241,16 @@ TEST_CASE("script_standard_ExtractDestinations") {
   BOOST_CHECK_EQUAL(addresses.size(), 1);
   BOOST_CHECK_EQUAL(nRequired, 1);
 #warning "fix this for Variant builds"
-  //    BOOST_CHECK(boost::get<CKeyID>(&addresses[0]) &&  *boost::get<CKeyID>(&addresses[0]) == pubkeys[0].GetID());
+  //    BOOST_CHECK(boost::get<CKeyID<0>>(&addresses[0]) &&  *boost::get<CKeyID<0>>(&addresses[0]) == pubkeys[0].GetKeyID());
 
   // TX_PUBKEYHASH
   s.clear();
-  s << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
+  s << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetKeyID()) << OP_EQUALVERIFY << OP_CHECKSIG;
   BOOST_CHECK(ExtractDestinations(s, whichType, addresses, nRequired));
   BOOST_CHECK_EQUAL(whichType, TX_PUBKEYHASH);
   BOOST_CHECK_EQUAL(addresses.size(), 1);
   BOOST_CHECK_EQUAL(nRequired, 1);
-  //    BOOST_CHECK(boost::get<CKeyID>(&addresses[0]) && *boost::get<CKeyID>(&addresses[0]) == pubkeys[0].GetID());
+  //    BOOST_CHECK(boost::get<CKeyID<0>>(&addresses[0]) && *boost::get<CKeyID<0>>(&addresses[0]) == pubkeys[0].GetKeyID());
 
   // TX_SCRIPTHASH
   // initialize with leftover P2PKH script
@@ -271,8 +271,8 @@ TEST_CASE("script_standard_ExtractDestinations") {
   BOOST_CHECK_EQUAL(whichType, TX_MULTISIG);
   BOOST_CHECK_EQUAL(addresses.size(), 2);
   BOOST_CHECK_EQUAL(nRequired, 2);
-  //    BOOST_CHECK(boost::get<CKeyID>(&addresses[0]) && *boost::get<CKeyID>(&addresses[0]) == pubkeys[0].GetID());
-  //    BOOST_CHECK(boost::get<CKeyID>(&addresses[1]) && *boost::get<CKeyID>(&addresses[1]) == pubkeys[1].GetID());
+  //    BOOST_CHECK(boost::get<CKeyID<0>>(&addresses[0]) && *boost::get<CKeyID<0>>(&addresses[0]) == pubkeys[0].GetKeyID());
+  //    BOOST_CHECK(boost::get<CKeyID<0>>(&addresses[1]) && *boost::get<CKeyID<0>>(&addresses[1]) == pubkeys[1].GetKeyID());
 
   // TX_NULL_DATA
   s.clear();
@@ -281,7 +281,7 @@ TEST_CASE("script_standard_ExtractDestinations") {
 
   // TX_WITNESS_V0_KEYHASH
   s.clear();
-  s << OP_0 << ToByteVector(pubkeys[0].GetID());
+  s << OP_0 << ToByteVector(pubkeys[0].GetKeyID());
   BOOST_CHECK(!ExtractDestinations(s, whichType, addresses, nRequired));
 
   // TX_WITNESS_V0_SCRIPTHASH
@@ -301,10 +301,10 @@ TEST_CASE("script_standard_GetScriptFor_") {
 
   CScript expected, result;
 
-  // CKeyID
+  // CKeyID<0>
   expected.clear();
-  expected << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
-  result = GetScriptForDestination(pubkeys[0].GetID());
+  expected << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetKeyID()) << OP_EQUALVERIFY << OP_CHECKSIG;
+  result = GetScriptForDestination(pubkeys[0].GetKeyID());
   BOOST_CHECK(result == expected);
 
   // CScriptID
@@ -368,7 +368,7 @@ TEST_CASE("script_standard_IsMine") {
   {
     CBasicKeyStore keystore;
     scriptPubKey.clear();
-    scriptPubKey << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
+    scriptPubKey << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetKeyID()) << OP_EQUALVERIFY << OP_CHECKSIG;
 
     // Keystore does not have key
     result = IsMine(keystore, scriptPubKey, isInvalid);
@@ -387,7 +387,7 @@ TEST_CASE("script_standard_IsMine") {
     CBasicKeyStore keystore;
 
     CScript redeemScript;
-    redeemScript << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetID()) << OP_EQUALVERIFY << OP_CHECKSIG;
+    redeemScript << OP_DUP << OP_HASH160 << ToByteVector(pubkeys[0].GetKeyID()) << OP_EQUALVERIFY << OP_CHECKSIG;
 
     scriptPubKey.clear();
     scriptPubKey << OP_HASH160 << ToByteVector(CScriptID(redeemScript)) << OP_EQUAL;

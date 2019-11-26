@@ -349,7 +349,8 @@ QString AddressTableModel::addRow(const QString &type, const QString &label,
                 return QString();
             }
         }
-        strAddress = EncodeDestination(newKey.GetID());
+        if (newKey.IsEC()) strAddress = EncodeDestination(newKey.GetKeyID());
+        else strAddress = EncodeDestination(newKey.GetKeyID1());
     } else {
         return QString();
     }

@@ -12,8 +12,8 @@ source_group("DevaultHeaders" FILES ${DEVAULT_HEADERS})
 # The library
 add_library(devault
   ${DEVAULT_HEADERS}
-	rewards.cpp
-	rewards_calculation.cpp
+  rewards.cpp
+  rewards_calculation.cpp
   rewardsview.cpp
   budget.cpp
 )
@@ -21,12 +21,14 @@ add_library(devault
 find_package(Boost 1.58 REQUIRED ${BOOST_PACKAGES_REQUIRED})
 
 target_include_directories(devault
-	PRIVATE
-    ${Boost_INCLUDE_DIRS}
-		${CMAKE_CURRENT_SOURCE_DIR}/../leveldb/include
-		..
-	PUBLIC
-		# To access the config.
-		${CMAKE_CURRENT_BINARY_DIR}/..
-)
+  PRIVATE
+  ${Boost_INCLUDE_DIRS}
+  ${CMAKE_CURRENT_SOURCE_DIR}/../leveldb/include
+  ..
+  PUBLIC
+  # To access the config.
+  ${CMAKE_CURRENT_BINARY_DIR}/..
+  ${CMAKE_CURRENT_SOURCE_DIR}/../bls/relic/include
+  ${CMAKE_BINARY_DIR} # for relic
+  )
 

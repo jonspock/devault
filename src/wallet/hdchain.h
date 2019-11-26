@@ -4,6 +4,7 @@
 #pragma once
 
 #include <key.h>
+#include <wallet/extkey.h>
 #include <wallet/mnemonic.h>
 #include <sync.h>
 #include <support/allocators/secure.h>
@@ -85,8 +86,6 @@ public:
     vchMnemonic.clear();
     mapAccounts.clear();
     fCrypted = false;
-    // default blank account
-    mapAccounts.insert(std::pair<uint32_t, CHDAccount>(0, CHDAccount()));
     return IsNull();
   }
 
@@ -111,7 +110,7 @@ public:
 
   void DeriveChildExtKey(uint32_t nAccountIndex, bool fInternal, uint32_t nChildIndex, CExtKey &extKeyRet);
 
-  void AddAccount();
+  void AddAccount(uint32_t nAccountIndex);
   bool GetAccount(uint32_t nAccountIndex, CHDAccount &hdAccountRet);
   bool SetAccount(uint32_t nAccountIndex, const CHDAccount &hdAccount);
   size_t CountAccounts();

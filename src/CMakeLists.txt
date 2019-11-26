@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.5)
 project(DeVault)
 
 # Default visibility is hidden on all targets.
-set(CMAKE_C_VISIBILITY_PRESET hidden)
-set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+#set(CMAKE_C_VISIBILITY_PRESET hidden)
+#set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 
 include(FeatureSummary)
 
@@ -21,7 +21,7 @@ option(BUILD_CLI "Build devault-cli" ON)
 option(BUILD_TX "Build devault-tx" ON)
 option(BUILD_QT "Build devault-qt" ON)
 option(BUILD_BENCH "Build benchmark code" OFF)
-option(BUILD_CTESTS "Build cmake unit tests" ON)
+option(BUILD_CTESTS "Build cmake unit tests" OFF)
 option(BUILD_ROCKSDB "Use Rocksdb instead of LevelDb" ON)
 option(ENABLE_HARDENING "Harden the executables" OFF)
 option(BUILD_BUNDLE "For MacOS build MacOS Application" OFF)
@@ -153,7 +153,7 @@ add_compiler_flags(
 	-Wall
 	-Wextra
 	-Wformat
-	-Wvla
+##	-Wvla
 	-Wformat-security
 	-Wcast-align
 	-Wunused-parameter
@@ -269,6 +269,8 @@ endif()
 add_subdirectory(secp256k1)
 add_subdirectory(univalue)
 
+add_subdirectory(bls)
+
 #--------------------------------------------------------------------------------
 # DeVault
 #--------------------------------------------------------------------------------
@@ -289,6 +291,12 @@ source_group("SrcHeaders" FILES ${HEADERS})
 
 file(GLOB CON_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/consensus/*.h)
 source_group("ConsenusHeaders" FILES ${CON_HEADERS})
+
+file(GLOB IF_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/interfaces/*.h)
+source_group("InterfaceHeaders" FILES ${IF_HEADERS})
+
+file(GLOB BLS_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/bls/*.h ${CMAKE_CURRENT_SOURCE_DIR}/bls/*.hpp)
+source_group("BLSHeaders" FILES ${BLS_HEADERS})
 
 file(GLOB POLICY_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/policy/*.h)
 source_group("PolicyHeaders" FILES ${POLICY_HEADERS})
@@ -409,7 +417,7 @@ add_library(common
 	warnings.cpp
 )
 
-target_link_libraries(common util secp256k1)
+target_link_libraries(common util secp256k1 bls)
 
 # libdevaultconsensus
 add_library(devaultconsensus
@@ -436,6 +444,7 @@ add_library(server
   ${RPC_HEADERS}
   ${CONSENSUS_HEADERS}
   ${POLICY_HEADERS}
+  ${IF_HEADERS}
 	addrman.cpp
 	addrdb.cpp
 	avalanche.cpp
@@ -567,7 +576,7 @@ if(BUILD_CLI)
 		target_sources(devault-cli PRIVATE bitcoin-cli-res.rc)
 	endif()
 
-	target_link_libraries(devault-cli common rpcclient ${EVENT_LIBRARY})
+	target_link_libraries(devault-cli bls relic_s common rpcclient ${EVENT_LIBRARY})
 endif()
 
 # bitcoin-tx
@@ -577,12 +586,12 @@ if(BUILD_TX)
 		target_sources(devault-tx PRIVATE bitcoin-tx-res.rc)
 	endif()
 
-	target_link_libraries(devault-tx devaultconsensus)
+	target_link_libraries(devault-tx devaultconsensus bls relic_s)
 endif()
 
 # bitcoind
 add_executable(devaultd bitcoind.cpp)
-target_link_libraries(devaultd server)
+target_link_libraries(devaultd server bls relic_s)
 if(${CMAKE_SYSTEM_NAME} MATCHES "Windows")
 	target_sources(devaultd PRIVATE bitcoind-res.rc)
 endif()

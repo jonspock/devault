@@ -150,8 +150,18 @@ static UniValue verifymessage(const Config &config,
     if (!IsValidDestination(destination)) {
         throw JSONRPCError(RPC_TYPE_ERROR, "Invalid address");
     }
-    const CKeyID *keyID = &std::get<CKeyID>(destination);
-    if (!keyID) {
+    CKeyID<0> keyID;
+    CKeyID<1> keyID1;
+    try {
+        keyID = std::get<CKeyID<0>>(destination);
+    }
+    catch (...) {  keyID.SetNull(); }
+    try {
+        keyID1 = std::get<CKeyID<1>>(destination);
+    }
+    catch (...) { keyID1.SetNull(); }
+
+    if (keyID.IsNull() && keyID1.IsNull()) {
         throw JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to key");
     }
 
@@ -171,8 +181,11 @@ static UniValue verifymessage(const Config &config,
     if (!pubkey.RecoverCompact(ss.GetHash(), vchSig)) {
         return false;
     }
-
-    return (pubkey.GetID() == *keyID);
+    if (!keyID.IsNull()) {
+        return (pubkey.GetKeyID() == keyID);
+    } else {
+        return (pubkey.GetKeyID1() == keyID1);
+    }
 }
 
 static UniValue signmessagewithprivkey(const Config &config,

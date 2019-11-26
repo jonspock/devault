@@ -662,6 +662,7 @@ static bool AcceptToMemoryPoolWorker(
 
         if (IsGreatWallEnabledForCurrentBlock(config)) {
             extraFlags |= SCRIPT_ENABLE_SCHNORR;
+            extraFlags |= SCRIPT_ENABLE_BLS;
             extraFlags |= SCRIPT_VERIFY_CHECKDATASIG_SIGOPS;
         }
 
@@ -1581,6 +1582,8 @@ static uint32_t GetBlockScriptFlags(const Config &config,
 
     // Start enforcing the DERSIG (BIP66) rule.
     flags |= SCRIPT_VERIFY_DERSIG;
+  
+    flags |= SCRIPT_ENABLE_BLS;
 
     // Start enforcing CHECKLOCKTIMEVERIFY (BIP65) rule.
     flags |= SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY;
@@ -1622,6 +1625,7 @@ static uint32_t GetBlockScriptFlags(const Config &config,
     // CHECKMULTISIG and its verify variant.
     if (IsGreatWallEnabledForCurrentBlock(config)) {
       flags |= SCRIPT_ENABLE_SCHNORR;
+      flags |= SCRIPT_ENABLE_BLS;
     }
 
     // We make sure this node will have replay protection during the next hard

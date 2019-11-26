@@ -10,7 +10,7 @@
 #include <script/script.h>
 #include <serialize.h>
 
-class CKeyID;
+template <int T> class CKeyID;
 class CPubKey;
 class CScriptID;
 
@@ -46,7 +46,7 @@ protected:
      * For example, IsToPubKey also verifies whether the public key is valid (as
      * invalid ones cannot be represented in compressed form).
      */
-    bool IsToKeyID(CKeyID &hash) const;
+    bool IsToKeyID(CKeyID<0> &hash) const;
     bool IsToScriptID(CScriptID &hash) const;
     bool IsToPubKey(CPubKey &pubkey) const;
 

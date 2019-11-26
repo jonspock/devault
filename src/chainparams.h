@@ -60,6 +60,8 @@ public:
     int ExtCoinType() const { return nExtCoinType; }
     const std::string &CashAddrPrefix() const { return cashaddrPrefix; }
     const std::string &CashAddrSecretPrefix() const { return cashaddrSecretPrefix; }
+    const std::string &BLSAddrPrefix() const { return blsAddrPrefix; }
+    const std::string &BLSAddrSecretPrefix() const { return blsAddrSecretPrefix; }
     const CCheckpointData &Checkpoints() const { return checkpointData; }
     const ChainTxData &TxData() const { return chainTxData; }
 
@@ -75,6 +77,8 @@ protected:
     int nExtCoinType;
     std::string cashaddrPrefix;
     std::string cashaddrSecretPrefix;
+    std::string blsAddrPrefix;
+    std::string blsAddrSecretPrefix;
     std::string strNetworkID;
     CBlock genesis;
     bool fDefaultConsistencyChecks;

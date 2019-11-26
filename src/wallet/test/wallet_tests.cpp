@@ -646,7 +646,7 @@ TEST_CASE("ComputeTimeSmart") {
 TEST_CASE("LoadReceiveRequests") {
     WalletTestingSetup setup;
 
-    CTxDestination dest = CKeyID();
+    CTxDestination dest = CKeyID<0>();
     LOCK(pwalletMain->cs_wallet);
     pwalletMain->AddDestData(dest, "misc", "val_misc");
     pwalletMain->AddDestData(dest, "rr0", "val_rr0");
@@ -719,13 +719,13 @@ public:
 TEST_CASE("ListCoins") {
     ListCoinsTestingSetup setup;
     std::string coinbaseAddress =
-        setup.coinbaseKey.GetPubKey().GetID().ToString();
+        setup.coinbaseKey.GetPubKey().GetKeyID().ToString();
 
     // Confirm ListCoins initially returns 1 coin grouped under coinbaseKey
     // address.
     auto list = setup.wallet->ListCoins();
     REQUIRE(list.size() == 1);
-    REQUIRE(std::get<CKeyID>(list.begin()->first).ToString() ==
+    REQUIRE(std::get<CKeyID<0>>(list.begin()->first).ToString() ==
             coinbaseAddress);
     REQUIRE(list.begin()->second.size() == 1);
 
@@ -743,7 +743,7 @@ TEST_CASE("ListCoins") {
                      false /* subtract fee */});
     list = wallet->ListCoins();
     REQUIRE(list.size() == 1);
-    REQUIRE(std::get<CKeyID>(list.begin()->first).ToString() ==
+    REQUIRE(std::get<CKeyID<0>>(list.begin()->first).ToString() ==
             coinbaseAddress);
     REQUIRE(list.begin()->second.size() == 2);
 
@@ -770,7 +770,7 @@ TEST_CASE("ListCoins") {
     // being locked.
     list = wallet->ListCoins();
     REQUIRE(list.size() == 1);
-    REQUIRE(std::get<CKeyID>(list.begin()->first).ToString() ==
+    REQUIRE(std::get<CKeyID<0>>(list.begin()->first).ToString() ==
             coinbaseAddress);
     REQUIRE(list.begin()->second.size() == 2);
 #endif

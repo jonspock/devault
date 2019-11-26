@@ -37,8 +37,8 @@ TEST_CASE("write_erase_name") {
     auto walletdbwrapper = TmpDB(setup.pathTemp, "write_erase_name");
     WalletBatch walletdb(setup.pwalletMain->GetDBHandle(), "cr+");
 
-    CTxDestination dst1 = CKeyID(uint160S("c0ffee"));
-    CTxDestination dst2 = CKeyID(uint160S("f00d"));
+    CTxDestination dst1 = CKeyID<0>(uint160S("c0ffee"));
+    CTxDestination dst2 = CKeyID<0>(uint160S("f00d"));
 
     REQUIRE(walletdb.WriteNameAndLabel(dst1, "name1"));
     REQUIRE(walletdb.WriteNameAndLabel(dst2, "name2"));
@@ -63,8 +63,8 @@ TEST_CASE("write_erase_purpose") {
     auto walletdbwrapper = TmpDB(setup.pathTemp, "write_erase_purpose");
     WalletBatch walletdb(setup.pwalletMain->GetDBHandle(), "cr+");
 
-    CTxDestination dst1 = CKeyID(uint160S("c0ffee"));
-    CTxDestination dst2 = CKeyID(uint160S("f00d"));
+    CTxDestination dst1 = CKeyID<0>(uint160S("c0ffee"));
+    CTxDestination dst2 = CKeyID<0>(uint160S("f00d"));
 
     REQUIRE(walletdb.WritePurpose(dst1, "purpose1"));
     REQUIRE(walletdb.WritePurpose(dst2, "purpose2"));
@@ -89,8 +89,8 @@ TEST_CASE("write_erase_destdata") {
     auto walletdbwrapper = TmpDB(setup.pathTemp, "write_erase_destdata");
     WalletBatch walletdb(setup.pwalletMain->GetDBHandle(), "cr+");
 
-    CTxDestination dst1 = CKeyID(uint160S("c0ffee"));
-    CTxDestination dst2 = CKeyID(uint160S("f00d"));
+    CTxDestination dst1 = CKeyID<0>(uint160S("c0ffee"));
+    CTxDestination dst2 = CKeyID<0>(uint160S("f00d"));
 
     REQUIRE(walletdb.WriteDestData(dst1, "key1", "value1"));
     REQUIRE(walletdb.WriteDestData(dst1, "key2", "value2"));

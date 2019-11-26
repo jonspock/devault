@@ -4,36 +4,30 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_PUBKEY_H
-#define BITCOIN_PUBKEY_H
+#pragma once
 
 #include <hash.h>
 #include <serialize.h>
 #include <uint256.h>
+#include <keyid.h>
 
 #include <boost/range/adaptor/sliced.hpp>
 
 #include <stdexcept>
 #include <vector>
 
-const unsigned int BIP32_EXTKEY_SIZE = 74;
-
-/** A reference to a CKey: the Hash160 of its serialized public key */
-class CKeyID : public uint160 {
-public:
-    CKeyID() : uint160() {}
-    explicit CKeyID(const uint160 &in) : uint160(in) {}
-};
-
 typedef uint256 ChainCode;
+
+static constexpr unsigned int BLS_ACCOUNT = 1; // 0 would mean secret keys same as default EC Account/Keys
+
 
 /** An encapsulated public key. */
 class CPubKey {
 public:
-    /**
-     * secp256k1:
-     */
-    static constexpr unsigned int PUBLIC_KEY_SIZE = 65;
+    static constexpr unsigned int BLS_SIGNATURE_SIZE = 96;
+    static constexpr unsigned int BLS_PUBLIC_KEY_SIZE = 48;
+    
+    // secp256k1:
     static constexpr unsigned int COMPRESSED_PUBLIC_KEY_SIZE = 33;
     static constexpr unsigned int SIGNATURE_SIZE = 72;
     static constexpr unsigned int COMPACT_SIGNATURE_SIZE = 65;
@@ -41,15 +35,13 @@ public:
      * see www.keylength.com
      * script supports up to 75 for single byte push
      */
-    static_assert(PUBLIC_KEY_SIZE >= COMPRESSED_PUBLIC_KEY_SIZE,
-                  "COMPRESSED_PUBLIC_KEY_SIZE is larger than PUBLIC_KEY_SIZE");
 
 private:
     /**
      * Just store the serialized data.
      * Its length can very cheaply be computed from the first byte.
      */
-    uint8_t vch[PUBLIC_KEY_SIZE];
+    uint8_t vch[BLS_PUBLIC_KEY_SIZE]; // since > COMPRESSED_PUBLIC_KEY_SIZE
     uint8_t _size;
 
     //! Set this key data to be invalid
@@ -57,7 +49,7 @@ private:
 
 public:
     bool static ValidSize(const std::vector<uint8_t> &vch) {
-        return vch.size() == COMPRESSED_PUBLIC_KEY_SIZE;
+        return vch.size() == COMPRESSED_PUBLIC_KEY_SIZE || vch.size() == BLS_PUBLIC_KEY_SIZE;
     }
 
     //! Construct an invalid public key.
@@ -108,13 +100,14 @@ public:
     template <typename Stream> void Unserialize(Stream &s) {
         unsigned int len = ::ReadCompactSize(s);
        _size = len;
-        if (len == COMPRESSED_PUBLIC_KEY_SIZE) {
+        if (len == COMPRESSED_PUBLIC_KEY_SIZE || len == BLS_PUBLIC_KEY_SIZE) {
             s.read((char *)vch, len);
         }
     }
 
     //! Get the KeyID of this public key (hash of its serialization)
-    CKeyID GetID() const { return CKeyID(Hash160(vch, vch + size())); }
+    CKeyID<0> GetKeyID() const { return CKeyID<0>(Hash160(vch, vch + size())); }
+    CKeyID<1> GetKeyID1() const { return CKeyID<1>(Hash160(vch, vch + size())); }
 
     //! Get the 256-bit hash of this public key.
     uint256 GetHash() const { return Hash(vch, vch + size()); }
@@ -124,7 +117,7 @@ public:
      *
      * Note that this is consensus critical as CheckSig() calls it!
      */
-    bool IsValid() const { return size() == COMPRESSED_PUBLIC_KEY_SIZE; }
+    bool IsValid() const { return size() == COMPRESSED_PUBLIC_KEY_SIZE || size() == BLS_PUBLIC_KEY_SIZE; }
 
     //! fully validate whether this is a valid public key (more expensive than
     //! IsValid())
@@ -134,6 +127,8 @@ public:
     bool IsCompressed() const { return size() == COMPRESSED_PUBLIC_KEY_SIZE; }
     bool HasCompressedByte() const { return vch[0] == 2 || vch[0] == 3; }
     void SetSize(int s) { _size = s; }
+    bool IsEC() const { return size() == COMPRESSED_PUBLIC_KEY_SIZE; }
+    bool IsBLS() const { return size() == BLS_PUBLIC_KEY_SIZE; }
 
     /**
      * Verify a DER-serialized ECDSA signature (~72 bytes).
@@ -142,12 +137,9 @@ public:
     bool VerifyECDSA(const uint256 &hash,
                      const std::vector<uint8_t> &vchSig) const;
 
-    /**
-     * Verify a Schnorr signature (=64 bytes).
-     * If this public key is not fully valid, the return value will be false.
-     */
-    bool VerifySchnorr(const uint256 &hash,
-                       const std::vector<uint8_t> &vchSig) const;
+    /* Not yet Ready since vch[] is too small currently */
+    bool VerifyBLS(const uint256 &hash,
+                   const std::vector<uint8_t> &vchSig) const;
 
     /**
      * Check whether a DER-serialized ECDSA signature is normalized (lower-S).
@@ -162,55 +154,9 @@ public:
     bool RecoverCompact(const uint256 &hash,
                         const std::vector<uint8_t> &vchSig);
 
-    //! Turn this public key into an uncompressed public key.
-    bool Decompress();
-
     //! Derive BIP32 child pubkey.
     bool Derive(CPubKey &pubkeyChild, ChainCode &ccChild, unsigned int nChild,
                 const ChainCode &cc) const;
-};
-
-struct CExtPubKey {
-    uint8_t nDepth;
-    uint8_t vchFingerprint[4];
-    unsigned int nChild;
-    ChainCode chaincode;
-    CPubKey pubkey;
-
-    friend bool operator==(const CExtPubKey &a, const CExtPubKey &b) {
-        return a.nDepth == b.nDepth &&
-               memcmp(&a.vchFingerprint[0], &b.vchFingerprint[0],
-                      sizeof(vchFingerprint)) == 0 &&
-               a.nChild == b.nChild && a.chaincode == b.chaincode &&
-               a.pubkey == b.pubkey;
-    }
-
-    void Encode(uint8_t code[BIP32_EXTKEY_SIZE]) const;
-    void Decode(const uint8_t code[BIP32_EXTKEY_SIZE]);
-    bool Derive(CExtPubKey &out, unsigned int nChild) const;
-
-    void Serialize(CSizeComputer &s) const {
-        // Optimized implementation for ::GetSerializeSize that avoids copying.
-        // add one byte for the size (compact int)
-        s.seek(BIP32_EXTKEY_SIZE + 1);
-    }
-    template <typename Stream> void Serialize(Stream &s) const {
-        unsigned int len = BIP32_EXTKEY_SIZE;
-        ::WriteCompactSize(s, len);
-        uint8_t code[BIP32_EXTKEY_SIZE];
-        Encode(code);
-        s.write((const char *)&code[0], len);
-    }
-    template <typename Stream> void Unserialize(Stream &s) {
-        unsigned int len = ::ReadCompactSize(s);
-        if (len != BIP32_EXTKEY_SIZE) {
-            throw std::runtime_error("Invalid extended key size\n");
-        }
-
-        uint8_t code[BIP32_EXTKEY_SIZE];
-        s.read((char *)&code[0], len);
-        Decode(code);
-    }
 };
 
 /**
@@ -225,4 +171,3 @@ public:
     ~ECCVerifyHandle();
 };
 
-#endif // BITCOIN_PUBKEY_H

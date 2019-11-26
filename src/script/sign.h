@@ -9,7 +9,7 @@
 #include <script/interpreter.h>
 #include <script/sighashtype.h>
 
-class CKeyID;
+template <int T> class CKeyID;
 class CKeyStore;
 class CMutableTransaction;
 class CScript;
@@ -28,7 +28,9 @@ public:
     virtual const BaseSignatureChecker &Checker() const = 0;
 
     /** Create a singular (non-script) signature. */
-    virtual bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID &keyid,
+    virtual bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID<0> &keyid,
+                           const CScript &scriptCode) const = 0;
+    virtual bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID<1> &keyid,
                            const CScript &scriptCode) const = 0;
 };
 
@@ -46,7 +48,9 @@ public:
                                 const Amount amountIn,
                                 SigHashType sigHashTypeIn = SigHashType());
     const BaseSignatureChecker &Checker() const override { return checker; }
-    bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID &keyid,
+    bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID<0> &keyid,
+                   const CScript &scriptCode) const override;
+    bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID<1> &keyid,
                    const CScript &scriptCode) const override;
 };
 
@@ -70,7 +74,9 @@ public:
     explicit DummySignatureCreator(const CKeyStore *keystoreIn)
         : BaseSignatureCreator(keystoreIn) {}
     const BaseSignatureChecker &Checker() const override;
-    bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID &keyid,
+    bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID<0> &keyid,
+                   const CScript &scriptCode) const override;
+    bool CreateSig(std::vector<uint8_t> &vchSig, const CKeyID<1> &keyid,
                    const CScript &scriptCode) const override;
 };
 

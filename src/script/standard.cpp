@@ -23,8 +23,12 @@ const char *GetTxnOutputType(txnouttype t) {
             return "nonstandard";
         case TX_PUBKEY:
             return "pubkey";
+        case TX_BLSPUBKEY:
+            return "blspubkey";
         case TX_PUBKEYHASH:
             return "pubkeyhash";
+        case TX_BLSKEYHASH:
+            return "blskeyhash";
         case TX_SCRIPTHASH:
             return "scripthash";
         case TX_MULTISIG:
@@ -36,12 +40,6 @@ const char *GetTxnOutputType(txnouttype t) {
 }
 
 static bool MatchPayToPubkey(const CScript &script, valtype &pubkey) {
-    if (script.size() == CPubKey::PUBLIC_KEY_SIZE + 2 &&
-        script[0] == CPubKey::PUBLIC_KEY_SIZE && script.back() == OP_CHECKSIG) {
-        pubkey = valtype(script.begin() + 1,
-                         script.begin() + CPubKey::PUBLIC_KEY_SIZE + 1);
-        return CPubKey::ValidSize(pubkey);
-    }
     if (script.size() == CPubKey::COMPRESSED_PUBLIC_KEY_SIZE + 2 &&
         script[0] == CPubKey::COMPRESSED_PUBLIC_KEY_SIZE &&
         script.back() == OP_CHECKSIG) {
@@ -53,8 +51,31 @@ static bool MatchPayToPubkey(const CScript &script, valtype &pubkey) {
     return false;
 }
 
+static bool MatchPayToBLSPubkey(const CScript &script, valtype &pubkey) {
+    if (script.size() == CPubKey::BLS_PUBLIC_KEY_SIZE + 2 &&
+        script[0] == CPubKey::BLS_PUBLIC_KEY_SIZE &&
+        script.back() == OP_CHECKSIG) {
+        pubkey =
+            valtype(script.begin() + 1,
+                    script.begin() + CPubKey::BLS_PUBLIC_KEY_SIZE + 1);
+        return true;
+    }
+    return false;
+}
+
+
 static bool MatchPayToPubkeyHash(const CScript &script, valtype &pubkeyhash) {
     if (script.size() == 25 && script[0] == OP_DUP && script[1] == OP_HASH160 &&
+        script[2] == 20 && script[23] == OP_EQUALVERIFY &&
+        script[24] == OP_CHECKSIG) {
+        pubkeyhash = valtype(script.begin() + 3, script.begin() + 23);
+        return true;
+    }
+    return false;
+}
+
+static bool MatchPayToBLSkeyHash(const CScript &script, valtype &pubkeyhash) {
+    if (script.size() == 25 && script[0] == OP_DUP && script[1] == OP_BLSKEYHASH &&
         script[2] == 20 && script[23] == OP_EQUALVERIFY &&
         script[24] == OP_CHECKSIG) {
         pubkeyhash = valtype(script.begin() + 3, script.begin() + 23);
@@ -126,9 +147,22 @@ bool Solver(const CScript &scriptPubKey, txnouttype &typeRet,
         vSolutionsRet.push_back(std::move(data));
         return true;
     }
+  
+    if (MatchPayToBLSPubkey(scriptPubKey, data)) {
+        typeRet = TX_BLSPUBKEY;
+        vSolutionsRet.push_back(std::move(data));
+        return true;
+    }
 
     if (MatchPayToPubkeyHash(scriptPubKey, data)) {
         typeRet = TX_PUBKEYHASH;
+        vSolutionsRet.push_back(std::move(data));
+        return true;
+    }
+
+    // just checking for BLS..
+    if (MatchPayToBLSkeyHash(scriptPubKey, data)) {
+        typeRet = TX_BLSKEYHASH;
         vSolutionsRet.push_back(std::move(data));
         return true;
     }
@@ -164,11 +198,25 @@ bool ExtractDestination(const CScript &scriptPubKey,
             return false;
         }
 
-        addressRet = pubKey.GetID();
+        addressRet = pubKey.GetKeyID();
         return true;
     }
+    if (whichType == TX_BLSPUBKEY) {
+        CPubKey pubKey(vSolutions[0]);
+        if (!pubKey.IsValid()) {
+            return false;
+        }
+
+        addressRet = pubKey.GetKeyID1();
+        return true;
+    }
+
     if (whichType == TX_PUBKEYHASH) {
-        addressRet = CKeyID(uint160(vSolutions[0]));
+        addressRet = CKeyID<0>(uint160(vSolutions[0]));
+        return true;
+    }
+    if (whichType == TX_BLSKEYHASH) {
+        addressRet = CKeyID<1>(uint160(vSolutions[0]));
         return true;
     }
     if (whichType == TX_SCRIPTHASH) {
@@ -201,7 +249,7 @@ bool ExtractDestinations(const CScript &scriptPubKey, txnouttype &typeRet,
                 continue;
             }
 
-            CTxDestination address = pubKey.GetID();
+            CTxDestination address = pubKey.GetKeyID();
             addressRet.push_back(address);
         }
 
@@ -233,12 +281,20 @@ public:
         return false;
     }
 
-    bool operator()(const CKeyID &keyID) const {
+    bool operator()(const CKeyID<0> &keyID) const {
         script->clear();
         *script << OP_DUP << OP_HASH160 << ToByteVector(keyID) << OP_EQUALVERIFY
                 << OP_CHECKSIG;
         return true;
     }
+        
+    bool operator()(const CKeyID<1> &keyID) const {
+        script->clear();
+        *script << OP_DUP << OP_BLSKEYHASH << ToByteVector(keyID) << OP_EQUALVERIFY
+                    << OP_CHECKSIG;
+        return true;
+    }
+
 
     bool operator()(const CScriptID &scriptID) const {
         script->clear();

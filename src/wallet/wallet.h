@@ -39,7 +39,7 @@ extern std::vector<CWalletRef> vpwallets;
 extern CFeeRate payTxFee;
 extern bool bSpendZeroConfChange;
 
-static const unsigned int DEFAULT_KEYPOOL_SIZE = 100;
+static const unsigned int DEFAULT_KEYPOOL_SIZE = 100; // Originally needed for non-HD wallets
 //! -paytxfee default
 static const Amount DEFAULT_TRANSACTION_FEE = Amount::zero();
 //! -fallbackfee default
@@ -677,6 +677,7 @@ private:
     int64_t nNextResend = 0;
     int64_t nLastResend = 0;
     bool fBroadcastTransactions = false;
+    bool fUpgradeBLSKeys = false; // for new key stuff
 
     /**
      * Used to keep track of spent outpoints, and detect and report conflicts
@@ -711,7 +712,8 @@ private:
     std::set<int64_t> setInternalKeyPool;
     std::set<int64_t> setExternalKeyPool;
     int64_t m_max_keypool_index = 0;
-    std::map<CKeyID, int64_t> m_pool_key_to_index;
+    std::map<CKeyID<0>, int64_t> m_pool_key_to_index;
+    std::map<CKeyID<1>, int64_t> m_pool_blskey_to_index;
 
     int64_t nTimeFirstKey = 0;
 
@@ -766,7 +768,8 @@ public:
     void LoadKeyPool(int64_t nIndex, const CKeyPool &keypool);
 
     // Map from Key ID to key metadata.
-    std::map<CKeyID, CKeyMetadata> mapKeyMetadata;
+    std::map<CKeyID<0>, CKeyMetadata> mapKeyMetadata;
+    std::map<CKeyID<1>, CKeyMetadata> mapBLSKeyMetadata;
 
     // Map from Script ID to key metadata (for watch-only keys).
     std::map<CScriptID, CKeyMetadata> m_script_metadata;
@@ -775,7 +778,8 @@ public:
     MasterKeyMap mapMasterKeys;
     unsigned int nMasterKeyMaxID = 0;
 
-    std::map<CKeyID, CHDPubKey> mapHdPubKeys; //<! memory map of HD extended pubkeys
+    std::map<CKeyID<0>, CHDPubKey> mapHdPubKeys; //<! memory map of HD extended pubkeys
+    std::map<CKeyID<1>, CHDPubKey> mapBLSPubKeys; //<! memory map of BLS HD extended pubkeys
 
 
     // Create wallet with dummy database handle
@@ -856,6 +860,8 @@ public:
     void UnlockCoin(const COutPoint &output);
     void UnlockAllCoins();
     void ListLockedCoins(std::vector<COutPoint> &vOutpts) const;
+    bool HasBLSKeys() const { return !mapBLSPubKeys.empty(); }
+    bool UseBLSKeys() const { return HasBLSKeys() || fUpgradeBLSKeys; }
 
     /*
      * Rescan abort properties
@@ -868,16 +874,10 @@ public:
      * keystore implementation
      * Generate a new key
      */
-    std::pair<CPubKey,CHDPubKey> GenerateNewKey(CHDChain& clearChain, bool internal);
-    //! Adds a key to the store, and saves it to disk.
-    bool AddKeyPubKey(const CKey &key, const CPubKey &pubkey) override;
-    //! Adds a key to the store, without saving it to disk (used by LoadWallet)
-    bool LoadKey(const CKey &key, const CPubKey &pubkey) {
-        return CCryptoKeyStore::AddKeyPubKey(key, pubkey);
-    }
-
+    std::tuple<CPubKey, CHDPubKey> GenerateNewKey(CHDChain& clearChain, bool internal);
     //! Load metadata (used by LoadWallet)
-    bool LoadKeyMetadata(const CKeyID &keyID, const CKeyMetadata &metadata);
+    bool LoadKeyMetadata(const CKeyID<0> &keyID, const CKeyMetadata &metadata);
+    bool LoadKeyMetadata(const CKeyID<1> &keyID, const CKeyMetadata &metadata);
     bool LoadScriptMetadata(const CScriptID &script_id,
                             const CKeyMetadata &metadata);
 
@@ -889,13 +889,6 @@ public:
     }
     void UpdateTimeFirstKey(int64_t nCreateTime);
 
-    //! Adds an encrypted key to the store, and saves it to disk.
-    bool AddCryptedKey(const CPubKey &vchPubKey,
-                       const std::vector<uint8_t> &vchCryptedSecret) override;
-    //! Adds an encrypted key to the store, without saving it to disk (used by
-    //! LoadWallet)
-    bool LoadCryptedKey(const CPubKey &vchPubKey,
-                        const std::vector<uint8_t> &vchCryptedSecret);
     bool AddCScript(const CScript &redeemScript) override;
     bool LoadCScript(const CScript &redeemScript);
 
@@ -940,6 +933,7 @@ public:
   
 
     void GetKeyBirthTimes(std::map<CTxDestination, int64_t> &mapKeyBirth) const;
+    void GetBLSKeyBirthTimes(std::map<CTxDestination, int64_t> &mapKeyBirth) const;
     unsigned int ComputeTimeSmart(const CWalletTx &wtx) const;
 
     /**
@@ -1059,13 +1053,18 @@ public:
     void ReturnKey(int64_t nIndex, bool fInternal, const CPubKey &pubkey);
     bool GetKeyFromPool(CPubKey &key, bool internal = false);
     int64_t GetOldestKeyPoolTime();
-    void GetAllReserveKeys(std::set<CKeyID>& setAddress) const;
+    void GetAllReserveKeys(std::set<CKeyID<0>>& setAddress) const;
+    void GetAllBLSReserveKeys(std::set<CKeyID<1>>& setAddress) const;
      /**
      * Marks all keys in the keypool up to and including reserve_key as used.
      */
     void MarkReserveKeysAsUsed(int64_t keypool_id);
-    const std::map<CKeyID, int64_t> &GetAllReserveKeys() const {
+    void MarkReserveBLSKeysAsUsed(int64_t keypool_id);
+    const std::map<CKeyID<0>, int64_t> &GetAllReserveKeys() const {
         return m_pool_key_to_index;
+    }
+    const std::map<CKeyID<1>, int64_t> &GetAllBLSReserveKeys() const {
+        return m_pool_blskey_to_index;
     }
     /** Does the wallet have at least min_keys in the keypool? */
     bool HasUnusedKeys(size_t min_keys) const;
@@ -1214,13 +1213,16 @@ public:
 
 
     //! GetPubKey implementation that also checks the mapHdPubKeys
-    bool GetPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const override;
+    bool GetPubKey(const CKeyID<0> &address, CPubKey& vchPubKeyOut) const override;
+    bool GetPubKey(const CKeyID<1> &address, CPubKey& vchPubKeyOut) const override;
     //! GetKey implementation that can derive a HD private key on the fly
-    bool GetKey(const CKeyID &address, CKey& keyOut) const override;
+    bool GetKey(const CKeyID<0> &address, CKey& keyOut) const override;
+    bool GetKey(const CKeyID<1> &address, CKey& keyOut) const override;
     //! Load metadata (used by LoadWallet)
     bool LoadKeyMetadata(const CTxDestination& pubKey, const CKeyMetadata &metadata);
 
-    bool HaveKey(const CKeyID &address) const override;
+    bool HaveKey(const CKeyID<0> &address) const override;
+    bool HaveKey(const CKeyID<1> &address) const override;
     bool LoadHDPubKey(const CHDPubKey &hdPubKey);
     bool AddHDPubKey(const CExtPubKey &extPubKey, bool fInternal);
     CHDPubKey AddHDPubKeyWithoutDB(const CExtPubKey &extPubKey, bool fInternal);

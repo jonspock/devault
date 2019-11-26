@@ -12,7 +12,7 @@
 class CChainParams;
 class CTxOut;
 
-enum CashAddrType : uint8_t { PUBKEY_TYPE = 0, SCRIPT_TYPE = 1, SECRET_TYPE = 2 };
+enum CashAddrType : uint8_t { PUBKEY_TYPE = 0, SCRIPT_TYPE = 1, SECRET_TYPE = 2, BLSPUBKEY_TYPE = 3 };
 
 struct CashAddrContent {
     CashAddrType type;

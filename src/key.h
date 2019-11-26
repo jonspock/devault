@@ -82,7 +82,8 @@ public:
      * This is expensive.
      */
     CPubKey GetPubKey() const;
-
+    CPubKey GetPubKeyForBLS() const;
+    
     /**
      * Create a DER-serialized ECDSA signature.
      * The test_case parameter tweaks the deterministic nonce.
@@ -91,11 +92,9 @@ public:
                    uint32_t test_case = 0) const;
 
     /**
-     * Create a Schnorr signature.
-     * The test_case parameter tweaks the deterministic nonce.
+     * Create a BLS signature.
      */
-    bool SignSchnorr(const uint256 &hash, std::vector<uint8_t> &vchSig,
-                     uint32_t test_case = 0) const;
+    bool SignBLS(const uint256 &hash, std::vector<uint8_t> &vchSig) const;
 
     /**
      * Create a compact ECDSA signature (65 bytes), which allows reconstructing
@@ -126,44 +125,6 @@ public:
               bool fSkipCheck);
 };
 
-struct CExtKey {
-    uint8_t nDepth;
-    uint8_t vchFingerprint[4];
-    unsigned int nChild;
-    ChainCode chaincode;
-    CKey key;
-
-    friend bool operator==(const CExtKey &a, const CExtKey &b) {
-        return a.nDepth == b.nDepth &&
-               memcmp(&a.vchFingerprint[0], &b.vchFingerprint[0],
-                      sizeof(vchFingerprint)) == 0 &&
-               a.nChild == b.nChild && a.chaincode == b.chaincode &&
-               a.key == b.key;
-    }
-
-    void Encode(uint8_t code[BIP32_EXTKEY_SIZE]) const;
-    void Decode(const uint8_t code[BIP32_EXTKEY_SIZE]);
-    bool Derive(CExtKey &out, unsigned int nChild) const;
-    CExtPubKey Neuter() const;
-    void SetMaster(const uint8_t *seed, unsigned int nSeedLen);
-    template <typename Stream> void Serialize(Stream &s) const {
-        unsigned int len = BIP32_EXTKEY_SIZE;
-        ::WriteCompactSize(s, len);
-        uint8_t code[BIP32_EXTKEY_SIZE];
-        Encode(code);
-        s.write((const char *)&code[0], len);
-    }
-    template <typename Stream> void Unserialize(Stream &s) {
-        unsigned int len = ::ReadCompactSize(s);
-        if (len != BIP32_EXTKEY_SIZE) {
-            throw std::runtime_error("Invalid extended key size\n");
-        }
-
-        uint8_t code[BIP32_EXTKEY_SIZE];
-        s.read((char *)&code[0], len);
-        Decode(code);
-    }
-};
 
 /**
  * Initialize the elliptic curve support. May not be called twice without

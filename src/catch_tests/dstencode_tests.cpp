@@ -24,7 +24,7 @@ TEST_CASE("test_addresses") {
   std::vector<uint8_t> hash = {118, 160, 64,  83, 189, 160, 168, 139, 218, 81,
                                119, 184, 106, 21, 195, 178, 159, 85,  152, 115};
 
-  const CTxDestination dstKey = CKeyID(uint160(hash));
+  const CTxDestination dstKey = CKeyID<0>(uint160(hash));
   const CTxDestination dstScript = CScriptID(uint160(hash));
 
   std::string cashaddr_pubkey = "devault:qpm2qsznhks23z7629mms6s4cwef74vcwvztjeqp4y";

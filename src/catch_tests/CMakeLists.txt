@@ -73,6 +73,7 @@ set(UNIT_CTESTS
   blockindex
   blockstatus
   bloom
+  bls
   bswap
   cashaddr
   cashaddrenc
@@ -121,11 +122,10 @@ set(UNIT_CTESTS
   rwcollection
   sanity
   scheduler
-  schnorr
   script_commitment
   script_P2SH
   script_standard
-  script
+####  script - Schnorr/BLS....
   scriptnum
   serialize
   sigcache

@@ -83,10 +83,12 @@ public:
     virtual bool getKeyFromPool(bool internal, CPubKey &pub_key) = 0;
 
     //! Get public key.
-    virtual bool getPubKey(const CKeyID &address, CPubKey &pub_key) = 0;
+    virtual bool getPubKey(const CKeyID<0> &address, CPubKey &pub_key) = 0;
+    virtual bool getPubKey(const CKeyID<1> &address, CPubKey &pub_key) = 0;
 
     //! Get private key.
-    virtual bool getPrivKey(const CKeyID &address, CKey &key) = 0;
+    virtual bool getPrivKey(const CKeyID<0> &address, CKey &key) = 0;
+    virtual bool getPrivKey(const CKeyID<1> &address, CKey &key) = 0;
 
     //! Return whether wallet has private key.
     virtual bool isSpendable(const CTxDestination &dest) = 0;

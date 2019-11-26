@@ -140,12 +140,19 @@ namespace {
         const CChainParams &getChainParams() override {
             return m_wallet.chainParams;
         }
-        bool getPubKey(const CKeyID &address, CPubKey &pub_key) override {
+        bool getPubKey(const CKeyID<0> &address, CPubKey &pub_key) override {
             return m_wallet.GetPubKey(address, pub_key);
         }
-        bool getPrivKey(const CKeyID &address, CKey &key) override {
+        bool getPrivKey(const CKeyID<0> &address, CKey &key) override {
             return m_wallet.GetKey(address, key);
         }
+        bool getPrivKey(const CKeyID<1> &address, CKey &key) override {
+            return m_wallet.GetKey(address, key);
+        }
+        bool getPubKey(const CKeyID<1> &address, CPubKey &pub_key) override {
+            return m_wallet.GetPubKey(address, pub_key);
+        }
+
         bool isSpendable(const CTxDestination &dest) override {
             return IsMine(m_wallet, dest) & ISMINE_SPENDABLE;
         }

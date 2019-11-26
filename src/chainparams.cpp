@@ -144,6 +144,8 @@ public:
         nExtCoinType = 339;
         cashaddrPrefix = "devault";
         cashaddrSecretPrefix = "dvtpriv";
+        blsAddrPrefix = "dvt";
+        blsAddrSecretPrefix = "blspriv";
 
         // Rewards
         consensus.nPerCentPerYear = {15,12,9,7,5};
@@ -231,6 +233,9 @@ public:
         nExtCoinType = 1;
         cashaddrPrefix = "dvtest";
         cashaddrSecretPrefix = "testpriv"; // Shouldn't matter that "dv" isn't indicated
+        blsAddrPrefix = "blstest";
+        blsAddrSecretPrefix = "testblspriv";
+
 
         // Rewards
         consensus.nPerCentPerYear = {1500,1200,900,7,5};
@@ -319,6 +324,8 @@ public:
         nExtCoinType = 1;
         cashaddrPrefix = "dvreg";
         cashaddrSecretPrefix = "regpriv";
+        blsAddrPrefix = "blsreg";
+        blsAddrSecretPrefix = "regblspriv";
 
         // Rewards
         consensus.nPerCentPerYear = {15,12,9,7,5};

@@ -164,6 +164,7 @@ BITCOIN_CORE_H = \
   interfaces/node.h \
   interfaces/wallet.h \
   key.h \
+  keyid.h \
   keystore.h \
   dbwrapper.h \
   limitedmap.h \
@@ -235,6 +236,7 @@ BITCOIN_CORE_H = \
   wallet/hdchain.h \
   wallet/db.h \
   wallet/dictionary.h \
+  wallet/extkey.h \
   wallet/finaltx.h \
   wallet/rpcdump.h \
   wallet/fees.h \
@@ -344,6 +346,7 @@ libbitcoin_wallet_a_SOURCES = \
   wallet/hdchain.cpp \
   wallet/crypter.cpp \
   wallet/db.cpp \
+  wallet/extkey.cpp \
   wallet/finaltx.cpp \
   wallet/fees.cpp \
   wallet/init.cpp \
@@ -385,6 +388,30 @@ crypto_libbitcoin_crypto_base_a_SOURCES = \
   crypto/sha512.h \
   crypto/siphash.cpp \
   crypto/siphash.h
+
+# crypto primitives library
+libbitcoin_bls_CPPFLAGS = $(AM_CPPFLAGS)
+libbitcoin_bls_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
+libbitcoin_bls_SOURCES = \
+  bls/bls.hpp \
+  bls/pubkey.h \
+  bls/signbls.h \
+  bls/getblspublickey.h \
+  bls/blocksignature.h \
+  bls/util.hpp \
+  bls/signature.hpp \
+  bls/privatekey.hpp \
+  bls/aggregationinfo.hpp \
+  bls/bls.cpp \
+  bls/pubkey.cpp \
+  bls/signbls.cpp \
+  bls/getblspublickey.cpp \
+  bls/blocksignature.cpp \
+  bls/util.cpp \
+  bls/signature.cpp \
+  bls/privatekey.cpp \
+  bls/aggregationinfo.cpp
+
 
 if USE_ASM
 crypto_libbitcoin_crypto_base_a_SOURCES += crypto/sha256_sse4.cpp
@@ -645,7 +672,7 @@ bdb_check_LDADD += $(BOOST_THREAD_LIB) $(BOOST_LIBS) $(BDB_LIBS) $(CRYPTO_LIBS) 
 # devaultconsensus library #
 if BUILD_BITCOIN_LIBS
 include_HEADERS = script/devaultconsensus.h
-libdevaultconsensus_la_SOURCES = $(crypto_libbitcoin_crypto_base_a_SOURCES) $(libbitcoin_consensus_a_SOURCES)
+libdevaultconsensus_la_SOURCES = $(crypto_libbitcoin_crypto_base_a_SOURCES) $(libbitcoin_consensus_a_SOURCES) $(libbitcoin_bls_SOURCES)
 
 libdevaultconsensus_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
 libdevaultconsensus_la_LIBADD = $(LIBSECP256K1)

@@ -16,7 +16,7 @@
 
 static const bool DEFAULT_ACCEPT_DATACARRIER = true;
 
-class CKeyID;
+template <int T> class CKeyID;
 class CScript;
 
 /** A reference to a CScript: the Hash160 of its serialization (see script.h) */
@@ -47,14 +47,16 @@ extern bool fAcceptDatacarrier;
  * details.
  */
 static const uint32_t MANDATORY_SCRIPT_VERIFY_FLAGS =
-    SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC |
+    SCRIPT_VERIFY_P2SH | SCRIPT_VERIFY_STRICTENC | SCRIPT_ENABLE_BLS |
     SCRIPT_ENABLE_SIGHASH_FORKID | SCRIPT_VERIFY_LOW_S | SCRIPT_VERIFY_NULLFAIL;
 
 enum txnouttype {
     TX_NONSTANDARD,
     // 'standard' transaction types:
     TX_PUBKEY,
+    TX_BLSPUBKEY,
     TX_PUBKEYHASH,
+    TX_BLSKEYHASH,
     TX_SCRIPTHASH,
     TX_MULTISIG,
     // unspendable OP_RETURN script that carries data
@@ -74,12 +76,11 @@ public:
 /**
  * A txout script template with a specific destination. It is either:
  *  * CNoDestination: no destination set
- *  * CKeyID: TX_PUBKEYHASH destination
+ *  * CKeyID<0>: TX_PUBKEYHASH destination
  *  * CScriptID: TX_SCRIPTHASH destination
  *  A CTxDestination is the internal data type encoded in a bitcoin address
  */
-typedef std::variant<CNoDestination, CKeyID, CScriptID> CTxDestination;
-
+typedef std::variant<CNoDestination, CKeyID<0>, CKeyID<1>, CScriptID> CTxDestination;
 
 /** Check whether a CTxDestination is a CNoDestination. */
 bool IsValidDestination(const CTxDestination &dest);
@@ -128,7 +129,7 @@ bool ExtractDestinations(const CScript &scriptPubKey, txnouttype &typeRet,
 
 /**
  * Generate a Bitcoin scriptPubKey for the given CTxDestination. Returns a P2PKH
- * script for a CKeyID destination, a P2SH script for a CScriptID, and an empty
+ * script for a CKeyID<0> destination, a P2SH script for a CScriptID, and an empty
  * script for CNoDestination.
  */
 CScript GetScriptForDestination(const CTxDestination &dest);

@@ -22,7 +22,7 @@ class TransactionTableModel;
 class WalletModelTransaction;
 
 class CCoinControl;
-class CKeyID;
+template <int T> class CKeyID;
 class COutPoint;
 class COutput;
 class CPubKey;

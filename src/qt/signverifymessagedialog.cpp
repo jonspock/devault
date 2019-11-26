@@ -118,7 +118,7 @@ void SignVerifyMessageDialog::on_signMessageButton_SM_clicked() {
             tr("Please check the address and try again."));
         return;
     }
-    const CKeyID *keyID = &std::get<CKeyID>(destination);
+    const CKeyID<0> *keyID = &std::get<CKeyID<0>>(destination);
     if (!keyID) {
         ui->addressIn_SM->setValid(false);
         ui->statusLabel_SM->setStyleSheet("QLabel { color: red; }");
@@ -198,7 +198,7 @@ void SignVerifyMessageDialog::on_verifyMessageButton_VM_clicked() {
             tr("Please check the address and try again."));
         return;
     }
-    CKeyID *keyID = &std::get<CKeyID>(destination);
+    CKeyID<0> *keyID = &std::get<CKeyID<0>>(destination);
     if (!keyID) {
         ui->addressIn_VM->setValid(false);
         ui->statusLabel_VM->setStyleSheet("QLabel { color: red; }");
@@ -234,7 +234,7 @@ void SignVerifyMessageDialog::on_verifyMessageButton_VM_clicked() {
         return;
     }
 
-    if (!(CTxDestination(pubkey.GetID()) == destination)) {
+    if (!(CTxDestination(pubkey.GetKeyID()) == destination)) {
         ui->statusLabel_VM->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel_VM->setText(QString("<nobr>") +
                                     tr("Message verification failed.") +

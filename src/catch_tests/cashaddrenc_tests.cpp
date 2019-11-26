@@ -38,7 +38,7 @@ std::vector<uint8_t> insecure_GetRandomByteArray(FastRandomContext &rand, size_t
 
 class DstTypeChecker {
   public:
-  void operator()(const CKeyID &id) { isKey = true; }
+  void operator()(const CKeyID<0> &id) { isKey = true; }
   void operator()(const CScriptID &id) { isScript = true; }
   void operator()(const CNoDestination &) {}
 
@@ -100,7 +100,7 @@ TEST_CASE("check_packaddr_throws") {
 }
 
 TEST_CASE("encode_decode") {
-  std::vector<CTxDestination> toTest = {CNoDestination{}, CKeyID(uint160S("badf00d")), CScriptID(uint160S("f00dbad"))};
+  std::vector<CTxDestination> toTest = {CNoDestination{}, CKeyID<0>(uint160S("badf00d")), CScriptID(uint160S("f00dbad"))};
 
   for (auto dst : toTest) {
     for (auto net : GetNetworks()) {
@@ -114,7 +114,7 @@ TEST_CASE("encode_decode") {
 
 // Check that an encoded cash address is not valid on another network.
 TEST_CASE("invalid_on_wrong_network") {
-  const CTxDestination dst = CKeyID(uint160S("c0ffee"));
+  const CTxDestination dst = CKeyID<0>(uint160S("c0ffee"));
   const CTxDestination invalidDst = CNoDestination{};
 
   for (auto net : GetNetworks()) {
@@ -140,7 +140,7 @@ TEST_CASE("random_dst") {
 
   for (size_t i = 0; i < NUM_TESTS; ++i) {
     uint160 hash = insecure_GetRandUInt160(rand);
-    const CTxDestination dst_key = CKeyID(hash);
+    const CTxDestination dst_key = CKeyID<0>(hash);
     const CTxDestination dst_scr = CScriptID(hash);
 
     const std::string encoded_key = EncodeCashAddr(dst_key, *params);
@@ -272,7 +272,7 @@ TEST_CASE("test_encode_address") {
                                      "devault:pqq3728yw0y47sqn6l2na30mcw6zm78dzqjaq30l78"};
 
   for (size_t i = 0; i < hash.size(); ++i) {
-    const CTxDestination dstKey = CKeyID(uint160(hash[i]));
+    const CTxDestination dstKey = CKeyID<0>(uint160(hash[i]));
     BOOST_CHECK_EQUAL(pubkey[i], EncodeCashAddr(dstKey, *params));
 
     CashAddrContent keyContent{PUBKEY_TYPE, hash[i]};
