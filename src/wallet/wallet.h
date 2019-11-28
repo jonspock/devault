@@ -661,7 +661,7 @@ private:
      */
     bool SelectCoins(const std::vector<COutput> &vAvailableCoins,
                      const Amount nTargetValue,
-                     std::set<CInputCoin> &setCoinsRet, Amount &nValueRet,
+                     std::set<CInputCoin> &setCoinsRet, Amount &nValueRet, 
                      const CCoinControl *coinControl = nullptr) const;
 
     std::unique_ptr<WalletDatabase> database;
@@ -822,6 +822,15 @@ public:
      * populate vCoins with vector of available COutputs.
      */
     void AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe = true,
+                        const CCoinControl *coinControl = nullptr,
+                        const Amount nMinimumAmount = Amount::min_amount(),
+                        const Amount nMaximumAmount = MAX_MONEY,
+                        const Amount nMinimumSumAmount = MAX_MONEY,
+                        const uint64_t nMaximumCount = 0,
+                        const int nMinDepth = 0,
+                        const int nMaxDepth = 9999999) const;
+
+    void AvailableBLSCoins(std::vector<COutput> &vCoins, bool fOnlySafe = true,
                         const CCoinControl *coinControl = nullptr,
                         const Amount nMinimumAmount = Amount::min_amount(),
                         const Amount nMaximumAmount = MAX_MONEY,

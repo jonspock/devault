@@ -94,6 +94,7 @@ static bool SignN(const std::vector<valtype> &multisigdata,
     return nSigned == nRequired;
 }
 
+
 /**
  * Sign scriptPubKey using signature made with creator.
  * Signatures are returned in scriptSigRet (or returns false if scriptPubKey
@@ -187,6 +188,7 @@ bool ProduceSignature(const BaseSignatureCreator &creator,
     std::vector<valtype> result;
     txnouttype whichType;
     // works for both EC & BLS
+    // for normal TxPubKeyHash inputs, result with be the signature followed by the public key
     bool solved = SignStep(creator, fromPubKey, result, whichType);
     CScript subscript;
 
@@ -208,6 +210,76 @@ bool ProduceSignature(const BaseSignatureCreator &creator,
                         STANDARD_SCRIPT_VERIFY_FLAGS, creator.Checker());
 }
 
+// To keep somewhat compatible - not used yet...
+//
+static bool SignN(const std::vector<valtype> &sigdata,
+                  const BaseSignatureCreator &creator,
+                  const std::vector<CPubKey> &keys, std::vector<valtype> &ret) {
+#pragma warning "to fill out BLS Sign stuff"    
+    return true; // TBD
+}
+
+bool ProduceBLSSignature(const BaseSignatureCreator &creator,
+                         const CScript &scriptPubKey, std::vector<uint8_t>& sig,
+                         CPubKey& pubkey
+                         ) {
+
+    std::vector<valtype> result;
+    txnouttype whichType;
+    // works for both EC & BLS
+    // for normal TxPubKeyHash inputs, result with be the signature followed by the public key
+    bool solved = SignStep(creator, scriptPubKey, result, whichType);
+    CScript subscript;
+    
+    sig = result[0];
+
+    std::vector<valtype> vSolutions;
+    if (!Solver(scriptPubKey, whichType, vSolutions)) {
+        return false;
+    }
+    
+    CKeyID<1> keyID1;
+    switch (whichType) {
+    case TX_BLSPUBKEY: {
+        keyID1 = CPubKey(vSolutions[0]).GetKeyID1();
+        break;
+    }
+    case TX_BLSKEYHASH: {
+        keyID1 = CKeyID<1>(uint160(vSolutions[0]));
+        break;
+    }
+    default:
+        return false;
+    }
+    return creator.KeyStore().GetPubKey(keyID1, pubkey);
+}
+
+bool GetBLSPublicKeyFromScript(const BaseSignatureCreator &creator, const CScript &scriptPubKey, CPubKey& vch) {
+
+    txnouttype whichTypeRet;
+    std::vector<valtype> vSolutions;
+    if (!Solver(scriptPubKey, whichTypeRet, vSolutions)) {
+        return false;
+    }
+    
+    CKeyID<1> keyID1;
+    switch (whichTypeRet) {
+    case TX_BLSPUBKEY: {
+        keyID1 = CPubKey(vSolutions[0]).GetKeyID1();
+        break;
+    }
+    case TX_BLSKEYHASH: {
+        keyID1 = CKeyID<1>(uint160(vSolutions[0]));
+        break;
+    }
+    default:
+        return false;
+    }
+    return creator.KeyStore().GetPubKey(keyID1, vch);
+}
+
+
+
 SignatureData DataFromTransaction(const CMutableTransaction &tx,
                                   unsigned int nIn) {
     SignatureData data;
@@ -224,6 +296,12 @@ void UpdateTransaction(CMutableTransaction &tx, unsigned int nIn,
                        const SignatureData &data) {
     assert(tx.vin.size() > nIn);
     UpdateInput(tx.vin[nIn], data);
+}
+
+// Not actually a Signature
+void UpdateTransaction(CMutableTransaction &tx, unsigned int nIn, const CScript &data) {
+    assert(tx.vin.size() > nIn);
+    tx.vin[nIn].scriptSig = data;
 }
 
 

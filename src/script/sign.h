@@ -3,8 +3,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef BITCOIN_SCRIPT_SIGN_H
-#define BITCOIN_SCRIPT_SIGN_H
+#pragma once
 
 #include <script/interpreter.h>
 #include <script/sighashtype.h>
@@ -14,6 +13,13 @@ class CKeyStore;
 class CMutableTransaction;
 class CScript;
 class CTransaction;
+
+enum class KeyTypes {
+                    LEGACY_ONLY,
+                    BLS_ONLY,
+                    POSSIBLY_MIXED
+};
+
 
 /** Virtual base class for signature creators. */
 class BaseSignatureCreator {
@@ -115,4 +121,13 @@ void UpdateTransaction(CMutableTransaction &tx, unsigned int nIn,
                        const SignatureData &data);
 void UpdateInput(CTxIn &input, const SignatureData &data);
 
-#endif // BITCOIN_SCRIPT_SIGN_H
+// Inject BLS Public Key as script instead of Signature
+void UpdateTransaction(CMutableTransaction &tx, unsigned int nIn, const CScript &data);
+
+
+// Not part of signing but keep here for now
+bool GetBLSPublicKeyFromScript(const BaseSignatureCreator &creator, const CScript &scriptPubKey, CPubKey& vch);
+
+bool ProduceBLSSignature(const BaseSignatureCreator &creator,
+                         const CScript &fromPubKey, std::vector<uint8_t>& result,
+                         CPubKey& pubkey);

@@ -40,6 +40,8 @@
 #include <wallet/mnemonic.h>
 #include <rpc/server.h> // for IsDeprecatedRPCEnabled
 
+#include <bls/signbls.h>
+
 #include <cassert>
 #include <future>
 #include <random>
@@ -2423,6 +2425,132 @@ void CWallet::AvailableCoins(std::vector<COutput> &vCoins, bool fOnlySafe,
     }
 }
 
+
+void CWallet::AvailableBLSCoins(std::vector<COutput> &vCoins, bool fOnlySafe,
+                             const CCoinControl *coinControl,
+                             const Amount nMinimumAmount,
+                             const Amount nMaximumAmount,
+                             const Amount nMinimumSumAmount,
+                             const uint64_t nMaximumCount, const int nMinDepth,
+                             const int nMaxDepth) const {
+    AssertLockHeld(cs_main);
+    AssertLockHeld(cs_wallet);
+
+    vCoins.clear();
+    Amount nTotal = Amount::zero();
+
+    for (auto& it : mapWallet) {
+        const TxId &wtxid = it.first;
+        const CWalletTx *pcoin = &(it.second);
+
+        if (!CheckFinalTx(*pcoin->tx)) {
+            continue;
+        }
+
+        if (pcoin->IsImmatureCoinBase()) {
+            continue;
+        }
+
+        int nDepth = pcoin->GetDepthInMainChain();
+        if (nDepth < 0) {
+            continue;
+        }
+
+        // We should not consider coins which aren't at least in our mempool.
+        // It's possible for these to be conflicted via ancestors which we may
+        // never be able to detect.
+        if (nDepth == 0 && !pcoin->InMempool()) {
+            continue;
+        }
+
+        bool safeTx = pcoin->IsTrusted();
+
+        // Bitcoin-ABC: Removed check that prevents consideration of coins from
+        // transactions that are replacing other transactions. This check based
+        // on pcoin->mapValue.count("replaces_txid") which was not being set
+        // anywhere.
+
+        // Similarly, we should not consider coins from transactions that have
+        // been replaced. In the example above, we would want to prevent
+        // creation of a transaction A' spending an output of A, because if
+        // transaction B were initially confirmed, conflicting with A and A', we
+        // wouldn't want to the user to create a transaction D intending to
+        // replace A', but potentially resulting in a scenario where A, A', and
+        // D could all be accepted (instead of just B and D, or just A and A'
+        // like the user would want).
+
+        // Bitcoin-ABC: retained this check as 'replaced_by_txid' is still set
+        // in the wallet code.
+        if (nDepth == 0 && pcoin->mapValue.count("replaced_by_txid")) {
+            safeTx = false;
+        }
+
+        if (fOnlySafe && !safeTx) {
+            continue;
+        }
+
+        if (nDepth < nMinDepth || nDepth > nMaxDepth) {
+            continue;
+        }
+
+        for (uint32_t i = 0; i < pcoin->tx->vout.size(); i++) {
+            if (pcoin->tx->vout[i].nValue < nMinimumAmount ||
+                pcoin->tx->vout[i].nValue > nMaximumAmount) {
+                continue;
+            }
+
+            const COutPoint outpoint(wtxid, i);
+
+            if (coinControl && coinControl->HasSelected() &&
+                !coinControl->fAllowOtherInputs &&
+                !coinControl->IsSelected(outpoint)) {
+                continue;
+            }
+
+            if (IsLockedCoin(outpoint)) {
+                continue;
+            }
+
+            if (IsSpent(outpoint)) {
+                continue;
+            }
+
+            isminetype mine = IsMine(pcoin->tx->vout[i]);
+            
+            if (!pcoin->tx->vout[i].IsBLS()) {
+                continue;
+            }
+
+            if (mine == ISMINE_NO) {
+                continue;
+            }
+
+            bool fSpendableIn = ((mine & ISMINE_SPENDABLE) != ISMINE_NO) ||
+                                (coinControl && coinControl->fAllowWatchOnly &&
+                                 (mine & ISMINE_WATCH_SOLVABLE) != ISMINE_NO);
+            bool fSolvableIn =
+                (mine & (ISMINE_SPENDABLE | ISMINE_WATCH_SOLVABLE)) !=
+                ISMINE_NO;
+
+            vCoins.emplace_back(pcoin, i, nDepth, fSpendableIn, fSolvableIn, safeTx);
+
+            // Checks the sum amount of all UTXO's.
+            if (nMinimumSumAmount != MAX_MONEY) {
+                nTotal += pcoin->tx->vout[i].nValue;
+
+                if (nTotal >= nMinimumSumAmount) {
+                    return;
+                }
+            }
+
+            // Checks the maximum number of UTXO's.
+            if (nMaximumCount > 0 && vCoins.size() >= nMaximumCount) {
+                return;
+            }
+        }
+    }
+}
+
 std::map<CTxDestination, std::vector<COutput>> CWallet::ListCoins() const {
     // TODO: Add AssertLockHeld(cs_wallet) here.
     //
@@ -2864,6 +2992,7 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
                                 std::string &strFailReason,
                                 const CCoinControl &coinControl, bool sign) {
     Amount nValue = Amount::zero();
+    KeyTypes kTypes = KeyTypes::POSSIBLY_MIXED;
     int nChangePosRequest = nChangePosInOut;
     unsigned int nSubtractFeeFromAmount = 0;
     for (const auto &recipient : vecSend) {
@@ -2925,6 +3054,10 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
 
         std::vector<COutput> vAvailableCoins;
         AvailableCoins(vAvailableCoins, true, &coinControl);
+        
+        std::vector<COutput> vAvailableBLSCoins;
+        AvailableBLSCoins(vAvailableBLSCoins, true, &coinControl);
+
 
         // Create change script that will be used if we need change
         // TODO: pass in scriptChange instead of reservekey so
@@ -3025,10 +3158,18 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
             if (pick_new_inputs) {
                 nValueIn = Amount::zero();
                 setCoins.clear();
-                if (!SelectCoins(vAvailableCoins, nValueToSelect, setCoins,
+                kTypes = KeyTypes::BLS_ONLY;
+                if (!SelectCoins(vAvailableBLSCoins, nValueToSelect, setCoins,
                                  nValueIn, &coinControl)) {
-                    strFailReason = _("Insufficient funds");
-                    return false;
+                    kTypes = KeyTypes::POSSIBLY_MIXED;
+                    // Retry with mixture of coins
+                    setCoins.clear();
+                    nValueIn = Amount::zero();
+                    if (!SelectCoins(vAvailableCoins, nValueToSelect, setCoins,
+                                                    nValueIn, &coinControl)) {
+                        strFailReason = _("Insufficient funds");
+                        return false;
+                    }
                 }
             }
 
@@ -3171,20 +3312,56 @@ bool CWallet::CreateTransaction(const std::vector<CRecipient> &vecSend,
 
             CTransaction txNewConst(txNew);
             int nIn = 0;
-            for (const auto &coin : setCoins) {
-                const CScript &scriptPubKey = coin.txout.scriptPubKey;
-                SignatureData sigdata;
 
-                if (!ProduceSignature(TransactionSignatureCreator(
-                                          this, &txNewConst, nIn,
-                                          coin.txout.nValue, sigHashType),
-                                      scriptPubKey, sigdata)) {
-                    strFailReason = _("Signing transaction failed");
-                    return false;
+            // Collect the Public Keys, getting from Hashes if necessary
+            std::vector<CPubKey> pubkeys;
+            std::vector<std::vector<uint8_t> > sigs;
+            if (kTypes == KeyTypes::BLS_ONLY) {
+                
+                
+                CPubKey pubkey;
+                for (const auto &coin : setCoins) {
+                    const CScript &scriptPubKey = coin.txout.scriptPubKey; // indicates BLS key
+                    std::vector<uint8_t> vSig;
+                    if (!ProduceBLSSignature(TransactionSignatureCreator(
+                                                                         this, &txNewConst, nIn,
+                                                                         coin.txout.nValue, sigHashType),
+                                             scriptPubKey, vSig, pubkey)) {
+                        strFailReason = _("Unable to get BLS Public Key");
+                        return false;
+                    }
+                    sigs.push_back(vSig);
+                    pubkeys.push_back(pubkey);
+                    // Put Public Key into the vin of the 1st input of the tx.
+                    CScript c = CScript() << ToByteVector(pubkey) << OP_BLSPUBKEY;
+                    UpdateTransaction(txNew, nIn++, c);
                 }
+                
+                // Last tx in has pubkey + Agg sig
+                std::vector<uint8_t> aggSig = bls::AggregateSigsBLS(sigs);
+                CScript c = CScript() << aggSig << ToByteVector(pubkey) << OP_CHECKSIG; // ???
+                SignatureData sigdata(c);
+                
+                // Put Agg Sig into the vin of the last input of the tx. Check this later...
+                UpdateTransaction(txNew, nIn-1, sigdata);
 
-                UpdateTransaction(txNew, nIn, sigdata);
-                nIn++;
+                
+            } else {
+                for (const auto &coin : setCoins) {
+                    const CScript &scriptPubKey = coin.txout.scriptPubKey;
+                    SignatureData sigdata;
+
+                    if (!ProduceSignature(TransactionSignatureCreator(
+                                              this, &txNewConst, nIn,
+                                              coin.txout.nValue, sigHashType),
+                                          scriptPubKey, sigdata)) {
+                        strFailReason = _("Signing transaction failed");
+                        return false;
+                    }
+
+                    UpdateTransaction(txNew, nIn, sigdata);
+                    nIn++;
+                }
             }
         }
 

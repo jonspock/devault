@@ -30,6 +30,7 @@
 #include <random.h>
 #include <reverse_iterator.h>
 #include <script/script.h>
+#include <script/sign.h> // for KeyTypes
 #include <script/scriptcache.h>
 #include <script/sigcache.h>
 #include <script/standard.h>
@@ -47,6 +48,8 @@
 
 #include <devault/rewards.h>
 #include <devault/budget.h>
+
+#include <bls/signbls.h>
 
 #include <atomic>
 #include <future>
@@ -1183,72 +1186,138 @@ bool CheckInputs(const CTransaction &tx, CValidationState &state,
         return true;
     }
 
+    // Check for BLS only Transaction
+    KeyTypes kTypes = KeyTypes::BLS_ONLY;
     for (size_t i = 0; i < tx.vin.size(); i++) {
-        const COutPoint &prevout = tx.vin[i].prevout;
-        const Coin &coin = inputs.AccessCoin(prevout);
-        assert(!coin.IsSpent());
+        txnouttype whichType;
+        std::vector<std::vector<uint8_t>> vSolutions;
+        bool solve = Solver(tx.vin[i].scriptSig, whichType, vSolutions);
+        if ((whichType != TX_BLSPUBKEY) && (whichType != TX_BLSKEYHASH)) {
+            kTypes = KeyTypes::POSSIBLY_MIXED;
+            break;
+        }
+    }
 
-        // We very carefully only pass in things to CScriptCheck which are
-        // clearly committed to by tx' witness hash. This provides a sanity
-        // check that our caching is not introducing consensus failures through
-        // additional data in, eg, the coins being spent being checked as a part
-        // of CScriptCheck.
-        const CScript &scriptPubKey = coin.GetTxOut().scriptPubKey;
-        const Amount amount = coin.GetTxOut().nValue;
+    if (kTypes == KeyTypes::BLS_ONLY) {
 
-        // Verify signature
-        CScriptCheck check(scriptPubKey, amount, tx, i, flags, sigCacheStore,
-                           txdata);
-        if (pvChecks) {
-            pvChecks->push_back(std::move(check));
-        } else if (!check()) {
-            ScriptError scriptError = check.GetScriptError();
-            // Compute flags without the optional standardness flags.
-            // This differs from MANDATORY_SCRIPT_VERIFY_FLAGS as it contains
-            // additional upgrade flags (see AcceptToMemoryPoolWorker variable
-            // extraFlags).
-            uint32_t mandatoryFlags = (flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS);
-          
-            if (flags != mandatoryFlags) {
-                // Check whether the failure was caused by a non-mandatory
-                // script verification check. If so, don't trigger DoS
-                // protection to avoid splitting the network on the basis of
-                // relay policy disagreements.
-                CScriptCheck check2(scriptPubKey, amount, tx, i, mandatoryFlags,
+        std::vector<std::vector<uint8_t>> pubkeys;
+        std::vector<uint8_t> aggSig;
+        
+        // Collect Public Keys 1st
+        for (size_t i = 0; i < tx.vin.size(); i++) {
+            const COutPoint &prevout = tx.vin[i].prevout;
+            const Coin &coin = inputs.AccessCoin(prevout);
+            assert(!coin.IsSpent());
+
+            // We very carefully only pass in things to CScriptCheck which are
+            // clearly committed to by tx' witness hash. This provides a sanity
+            // check that our caching is not introducing consensus failures through
+            // additional data in, eg, the coins being spent being checked as a part
+            // of CScriptCheck.
+            const CScript &scriptPubKey = coin.GetTxOut().scriptPubKey;
+            const Amount amount = coin.GetTxOut().nValue;
+
+            // Go from script to PubKeys here
+            txnouttype whichType;
+            std::vector<std::vector<uint8_t>> vSolutions;
+            bool solve = Solver(scriptPubKey, whichType, vSolutions);
+            
+            if (i < tx.vin.size()-1) {
+                assert(solve);
+                assert(whichType == TX_BLSPUBKEY);
+                //CPubKey pubkey(vSolutions[0]);
+                pubkeys.push_back(vSolutions[0]);
+            } else {
+                // Handle Grabbing PubKey + Agg Sig
+                pubkeys.push_back(vSolutions[0]);
+                aggSig = vSolutions[1];
+            }
+        }
+        // Now check
+        // Verify Aggregate Signature here
+        std::vector<uint8_t> aggKeys = bls::AggregatePubKeys(pubkeys);
+        CPubKey aggPub(aggKeys);
+        uint256 sighash; // should come from tx;
+        bool check = aggPub.VerifyBLS(sighash, aggSig);
+        
+        if (!check) {
+            ScriptError scriptError = ScriptError::CHECKSIGVERIFY;
+            return state.DoS(
+                        100, false, REJECT_INVALID,
+                        strprintf("mandatory-script-verify-flag-failed (%s)",
+                                  ScriptErrorString(scriptError)));
+        }
+
+    } else {
+     
+        
+        for (size_t i = 0; i < tx.vin.size(); i++) {
+            const COutPoint &prevout = tx.vin[i].prevout;
+            const Coin &coin = inputs.AccessCoin(prevout);
+            assert(!coin.IsSpent());
+
+            // We very carefully only pass in things to CScriptCheck which are
+            // clearly committed to by tx' witness hash. This provides a sanity
+            // check that our caching is not introducing consensus failures through
+            // additional data in, eg, the coins being spent being checked as a part
+            // of CScriptCheck.
+            const CScript &scriptPubKey = coin.GetTxOut().scriptPubKey;
+            const Amount amount = coin.GetTxOut().nValue;
+
+            // Verify signature
+            CScriptCheck check(scriptPubKey, amount, tx, i, flags, sigCacheStore,
+                               txdata);
+            if (pvChecks) {
+                pvChecks->push_back(std::move(check));
+            } else if (!check()) {
+                ScriptError scriptError = check.GetScriptError();
+                // Compute flags without the optional standardness flags.
+                // This differs from MANDATORY_SCRIPT_VERIFY_FLAGS as it contains
+                // additional upgrade flags (see AcceptToMemoryPoolWorker variable
+                // extraFlags).
+                uint32_t mandatoryFlags = (flags & ~STANDARD_NOT_MANDATORY_VERIFY_FLAGS);
+              
+                if (flags != mandatoryFlags) {
+                    // Check whether the failure was caused by a non-mandatory
+                    // script verification check. If so, don't trigger DoS
+                    // protection to avoid splitting the network on the basis of
+                    // relay policy disagreements.
+                    CScriptCheck check2(scriptPubKey, amount, tx, i, mandatoryFlags,
+                                        sigCacheStore, txdata);
+                    if (check2()) {
+                        return state.Invalid(
+                            false, REJECT_NONSTANDARD,
+                            strprintf("non-mandatory-script-verify-flag (%s)",
+                                      ScriptErrorString(scriptError)));
+                    }
+                    // update the error message to reflect the mandatory violation.
+                    scriptError = check2.GetScriptError();
+                }
+
+                // We also, regardless, need to check whether the transaction would
+                // be valid on the other side of the upgrade, so as to avoid
+                // splitting the network between upgraded and non-upgraded nodes.
+                CScriptCheck check3(scriptPubKey, amount, tx, i,
+                                    mandatoryFlags ^ SCRIPT_ENABLE_SCHNORR,
                                     sigCacheStore, txdata);
-                if (check2()) {
+                if (check3()) {
                     return state.Invalid(
-                        false, REJECT_NONSTANDARD,
-                        strprintf("non-mandatory-script-verify-flag (%s)",
+                        false, REJECT_INVALID,
+                        strprintf("upgrade-conditional-script-failure (%s)",
                                   ScriptErrorString(scriptError)));
                 }
-                // update the error message to reflect the mandatory violation.
-                scriptError = check2.GetScriptError();
-            }
 
-            // We also, regardless, need to check whether the transaction would
-            // be valid on the other side of the upgrade, so as to avoid
-            // splitting the network between upgraded and non-upgraded nodes.
-            CScriptCheck check3(scriptPubKey, amount, tx, i,
-                                mandatoryFlags ^ SCRIPT_ENABLE_SCHNORR,
-                                sigCacheStore, txdata);
-            if (check3()) {
-                return state.Invalid(
-                    false, REJECT_INVALID,
-                    strprintf("upgrade-conditional-script-failure (%s)",
+                // Failures of other flags indicate a transaction that is invalid in
+                // new blocks, e.g. a invalid P2SH. We DoS ban such nodes as they
+                // are not following the protocol. That said during an upgrade
+                // careful thought should be taken as to the correct behavior - we
+                // may want to continue peering with non-upgraded nodes even after
+                // soft-fork super-majority signaling has occurred.
+                return state.DoS(
+                    100, false, REJECT_INVALID,
+                    strprintf("mandatory-script-verify-flag-failed (%s)",
                               ScriptErrorString(scriptError)));
             }
-
-            // Failures of other flags indicate a transaction that is invalid in
-            // new blocks, e.g. a invalid P2SH. We DoS ban such nodes as they
-            // are not following the protocol. That said during an upgrade
-            // careful thought should be taken as to the correct behavior - we
-            // may want to continue peering with non-upgraded nodes even after
-            // soft-fork super-majority signaling has occurred.
-            return state.DoS(
-                100, false, REJECT_INVALID,
-                strprintf("mandatory-script-verify-flag-failed (%s)",
-                          ScriptErrorString(scriptError)));
         }
     }
 
