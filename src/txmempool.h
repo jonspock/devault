@@ -96,12 +96,8 @@ private:
     size_t nUsageSize;
     //!< Local time when entering the mempool
     int64_t nTime;
-    //!< Priority when entering the mempool
-    double entryPriority;
     //!< Chain height when entering the mempool
     unsigned int entryHeight;
-    //!< Sum of all txin values that are already in blockchain
-    Amount inChainInputValue;
     //!< keep track of transactions that spend a coinbase
     bool spendsCoinbase;
     //!< Total sigop plus P2SH sigops count
@@ -134,8 +130,7 @@ private:
 
 public:
     CTxMemPoolEntry(const CTransactionRef &_tx, const Amount _nFee,
-                    int64_t _nTime, double _entryPriority,
-                    unsigned int _entryHeight, Amount _inChainInputValue,
+                    int64_t _nTime, unsigned int _entryHeight,
                     bool spendsCoinbase, int64_t nSigOpsCost, LockPoints lp);
 
     const CTransaction &GetTx() const { return *this->tx; }
@@ -836,6 +831,14 @@ private:
 /**
  * CCoinsView that brings transactions from a memorypool into view.
  * It does not check for spendings by memory pool transactions.
+ * Instead, it provides access to all Coins which are either unspent in the
+ * base CCoinsView, or are outputs from any mempool transaction!
+ * This allows transaction replacement to work as expected, as you want to
+ * have all inputs "available" to check signatures, and any cycles in the
+ * dependency graph are checked directly in AcceptToMemoryPool.
+ * It also allows you to sign a double-spend directly in
+ * signrawtransactionwithkey and signrawtransactionwithwallet,
+ * as long as the conflicting transaction is not yet confirmed.
  */
 class CCoinsViewMemPool : public CCoinsViewBacked {
 protected:
