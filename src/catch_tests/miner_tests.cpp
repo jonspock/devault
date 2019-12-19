@@ -207,7 +207,6 @@ TEST_CASE("CreateNewBlock_validity") {
   uint256 hash;
   TestMemPoolEntryHelper entry;
   entry.nFee = 11 * Amount::min_amount();
-  entry.dPriority = 111.0;
   entry.nHeight = 11;
 
   fCheckpointsEnabled = false;

@@ -657,10 +657,6 @@ static bool AcceptToMemoryPoolWorker(
         double nPriorityDummy = 0;
         pool.ApplyDeltas(txid, nPriorityDummy, nModifiedFees);
 
-        Amount inChainInputValue;
-        double dPriority =
-            view.GetPriority(tx, chainActive.Height(), inChainInputValue);
-
         // Keep track of transactions that spend a coinbase, which we re-scan
         // during reorgs to ensure COINBASE_MATURITY is still met.
         bool fSpendsCoinbase = false;
@@ -672,8 +668,7 @@ static bool AcceptToMemoryPoolWorker(
             }
         }
 
-        CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, dPriority,
-                              chainActive.Height(), inChainInputValue,
+        CTxMemPoolEntry entry(ptx, nFees, nAcceptTime, chainActive.Height(),
                               fSpendsCoinbase, nSigOpsCount, lp);
         unsigned int nSize = entry.GetTxSize();
 
@@ -702,8 +697,7 @@ static bool AcceptToMemoryPoolWorker(
         }
 
         if (gArgs.GetBoolArg("-relaypriority", DEFAULT_RELAYPRIORITY) &&
-            nModifiedFees < minRelayTxFee.GetFee(nSize) &&
-            !AllowFree(entry.GetPriority(chainActive.Height() + 1))) {
+            nModifiedFees < minRelayTxFee.GetFee(nSize)) {
             // Require that free transactions have sufficient priority to be
             // mined in the next block.
             return state.DoS(0, false, REJECT_INSUFFICIENTFEE,
