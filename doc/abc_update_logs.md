@@ -2381,11 +2381,11 @@ XXXXX wallet: detecting duplicate wallet by comparing the db filename.
       kill CTxMemPoolEntry::GetPriority
       Remove deprecated startingpriority and currentpriority from RPC
       CompareIteratorByHash => CompareIteratorById
-      Remove TxCoinAgePriorityCompare
-      Do not log priority when using -printpriority
+#     Remove TxCoinAgePriorityCompare
+#     Do not log priority when using -printpriority
       [cmake] Use more sensible name for individual test targets
-      Merge #13844: doc: correct the help output for -prune
-      Merge #13412: Make ReceivedBlockTransactions return void
+#     Merge #13844: doc: correct the help output for -prune
+#     Merge #13412: Make ReceivedBlockTransactions return void
       Rename activation tests which are now feature tests
 #     Merge #13824: doc: Remove outdated net comment
       Cleanup graviton activation
