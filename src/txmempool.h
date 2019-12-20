@@ -238,7 +238,7 @@ private:
     const LockPoints &lp;
 };
 
-// extracts a transaction hash from CTxMempoolEntry or CTransactionRef
+// extracts a transaction id from CTxMemPoolEntry or CTransactionRef
 struct mempoolentry_txid {
     typedef TxId result_type;
     result_type operator()(const CTxMemPoolEntry &entry) const {
@@ -546,12 +546,12 @@ public:
     //!< All tx hashes/entries in mapTx, in random order
     std::vector<std::pair<TxHash, txiter>> vTxHashes;
 
-    struct CompareIteratorByHash {
+    struct CompareIteratorById {
         bool operator()(const txiter &a, const txiter &b) const {
             return a->GetTx().GetId() < b->GetTx().GetId();
         }
     };
-    typedef std::set<txiter, CompareIteratorByHash> setEntries;
+    typedef std::set<txiter, CompareIteratorById> setEntries;
 
     const setEntries &GetMemPoolParents(txiter entry) const
         EXCLUSIVE_LOCKS_REQUIRED(cs);
@@ -559,14 +559,14 @@ public:
         EXCLUSIVE_LOCKS_REQUIRED(cs);
 
 private:
-    typedef std::map<txiter, setEntries, CompareIteratorByHash> cacheMap;
+    typedef std::map<txiter, setEntries, CompareIteratorById> cacheMap;
 
     struct TxLinks {
         setEntries parents;
         setEntries children;
     };
 
-    typedef std::map<txiter, TxLinks, CompareIteratorByHash> txlinksMap;
+    typedef std::map<txiter, TxLinks, CompareIteratorById> txlinksMap;
     txlinksMap mapLinks;
 
     typedef std::map<CMempoolAddrDeltaKey, CMempoolAddrDelta, CMempoolAddrDeltaKeyCompare> addrDeltaMap;
