@@ -218,7 +218,7 @@ public:
 private:
     void InvalidBlockFound(CBlockIndex *pindex, const CValidationState &state);
     CBlockIndex *FindMostWorkChain();
-    void ReceivedBlockTransactions(const CBlock &block, CValidationState &state,
+    void ReceivedBlockTransactions(const CBlock &block, 
                                    CBlockIndex *pindexNew,
                                    const CDiskBlockPos &pos);
 
