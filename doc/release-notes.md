@@ -72,3 +72,6 @@ Other
 
  - Added `nTx` return value to `getblock` and `getblockheader` detailing the
    number of transactions in the returned block.
+ - Remove deprecated "startingpriority" and "currentpriority" from
+   `getrawmempool`, `getmempoolancestors`, `getmempooldescendants` and
+   `getmempoolentry` RPC.
