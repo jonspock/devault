@@ -399,8 +399,6 @@ public:
     }
 };
 
-typedef std::pair<double, Amount> TXModifier;
-
 /**
  * CTxMemPool stores valid-according-to-the-current-best-chain transactions that
  * may be included in the next block.
@@ -571,7 +569,7 @@ private:
 
 public:
     indirectmap<COutPoint, const CTransaction *> mapNextTx GUARDED_BY(cs);
-    std::map<TxId, TXModifier> mapDeltas;
+    std::map<TxId, Amount> mapDeltas;
 
     /**
      * Create a new CTxMemPool.
@@ -635,10 +633,8 @@ public:
     bool HasNoInputsOf(const CTransaction &tx) const;
 
     /** Affect CreateNewBlock prioritisation of transactions */
-    void PrioritiseTransaction(const TxId &txid, double dPriorityDelta,
-                               const Amount nFeeDelta);
-    void ApplyDeltas(const TxId &txid, double &dPriorityDelta,
-                     Amount &nFeeDelta) const;
+    void PrioritiseTransaction(const TxId &txid, const Amount nFeeDelta);
+    void ApplyDelta(const TxId &txid, Amount &nFeeDelta) const;
     void ClearPrioritisation(const TxId &txid);
 
     /** Get the transaction in the pool that spends the same prevout */
