@@ -2357,9 +2357,9 @@ XXXXX wallet: detecting duplicate wallet by comparing the db filename.
       finish backporting PR9602 - misc
       finish backporting PR9602 : remove unused priority number in mempool mapDeltas
       finish backporting PR9602 - test_bitcoin clean up unused param
-      finish backporting PR9602 - remove unused and untested miner code
+#     finish backporting PR9602 - remove unused and untested miner code
       finish backporting PR9602 - remove unused functional test framework code
-      finish backporting PR9602 - remove unused modified-size computations
+#     finish backporting PR9602 - remove unused modified-size computations
       Add sig files to Github release
       Fix nits in check-keys.sh
       Fix missing newline at end of keys file
@@ -2370,8 +2370,8 @@ XXXXX wallet: detecting duplicate wallet by comparing the db filename.
       [CMAKE] Separate the target for running the unit tests with upgrade
 #     Merge #13791: gui: Reject dialogs if key escape is pressed
       refactor null-signature checks in OP_CHECKSIG, OP_CHECKDATASIG
-      Backport PR11309: Minor cleanups for AcceptToMemoryPool
-      [diagnostic] perform more aggressive checking of the index during ActivateBestChain
+?     Backport PR11309: Minor cleanups for AcceptToMemoryPool
+#     [diagnostic] perform more aggressive checking of the index during ActivateBestChain
       Merge #15101: gui: Add WalletController
       Merge #14451: Allow building GUI without BIP70 support
       Fix heap-use-after-free in activation_tests
