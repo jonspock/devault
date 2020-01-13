@@ -9,6 +9,7 @@
 #include <miner.h>
 #include <pubkey.h>
 #include <random.h>
+#include <policy/policy.h>
 #include <script/scriptcache.h>
 #include <script/sighashtype.h>
 #include <script/sign.h>
