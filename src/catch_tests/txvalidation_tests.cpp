@@ -5,6 +5,7 @@
 #include <amount.h>
 #include <config.h>
 #include <consensus/validation.h>
+#include <policy/policy.h>
 #include <primitives/transaction.h>
 #include <script/script.h>
 #include <catch_tests/test_bitcoin.h>
