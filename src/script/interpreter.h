@@ -10,6 +10,7 @@
 #include <primitives/transaction.h>
 #include <script/script_flags.h>
 #include <script/script_error.h>
+#include <script/script_metrics.h>
 #include <script/sighashtype.h>
 
 #include <cstdint>
