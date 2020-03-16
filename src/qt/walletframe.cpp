@@ -165,6 +165,13 @@ void WalletFrame::unlockWallet() {
         walletView->updateWalletStatus();
     }
 }
+void WalletFrame::unloadWallet() {
+    WalletView *walletView = currentWalletView();
+    if (walletView) {
+        walletView->unloadWallet();
+        //walletView->updateWalletStatus();
+    }
+}
 
 void WalletFrame::lockWallet() {
     WalletView *walletView = currentWalletView();

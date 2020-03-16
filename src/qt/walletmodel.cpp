@@ -409,6 +409,13 @@ WalletModel::UnlockContext::UnlockContext(WalletModel *_wallet, bool _valid,
                                           bool _relock)
     : wallet(_wallet), valid(_valid), relock(_relock) {}
 
+void WalletModel::unloadWallet() {
+  // TBD
+  std::shared_ptr<CWallet> wallet = GetWallet(m_wallet->getWalletName());
+  UnloadWallet(std::move(wallet));
+}
+
+  
 WalletModel::UnlockContext::~UnlockContext() {
     if (valid && relock) {
         wallet->setWalletLocked(true);

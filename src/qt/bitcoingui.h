@@ -135,6 +135,7 @@ private:
     QAction *backupWalletAction = nullptr;
     QAction *changePassphraseAction = nullptr;
     QAction *unlockWalletAction = nullptr;
+    QAction *unloadWalletAction = nullptr;
     QAction *lockWalletAction = nullptr;
     QAction *aboutQtAction = nullptr;
     QAction *openRPCConsoleAction = nullptr;

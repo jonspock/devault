@@ -309,6 +309,10 @@ void BitcoinGUI::createActions() {
                     tr("&Unlock Wallet..."), this);
     unlockWalletAction->setToolTip(tr("Unlock wallet"));
 
+    unloadWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/lock_open"),
+                    tr("&Unload Wallet..."), this);
+    unloadWalletAction->setToolTip(tr("Unload wallet"));
+
     lockWalletAction = new QAction(platformStyle->TextColorIcon(":/icons/lock_closed"),
                   tr("&Lock Wallet..."), this);
     lockWalletAction->setToolTip(tr("Lock wallet"));
@@ -394,6 +398,7 @@ void BitcoinGUI::createActions() {
       connect(changePassphraseAction, &QAction::triggered, walletFrame,
               &WalletFrame::changePassphrase);
       connect(unlockWalletAction, &QAction::triggered, walletFrame,  &WalletFrame::unlockWallet);
+      connect(unloadWalletAction, &QAction::triggered, walletFrame,  &WalletFrame::unloadWallet);
       connect(lockWalletAction, &QAction::triggered, walletFrame,  &WalletFrame::lockWallet);
       connect(revealPhraseAction, &QAction::triggered, walletFrame,
               &WalletFrame::revealPhrase);
@@ -449,6 +454,7 @@ void BitcoinGUI::createMenuBar() {
         settings->addAction(changePassphraseAction);
         settings->addSeparator();
         settings->addAction(unlockWalletAction);
+        settings->addAction(unloadWalletAction);
         settings->addAction(lockWalletAction);
         settings->addSeparator();
         settings->addAction(revealPhraseAction);

@@ -401,6 +401,13 @@ void WalletView::unlockWallet() {
         dlg.exec();
      }
 }
+void WalletView::unloadWallet() {
+    if (!walletModel) {
+        return;
+    }
+
+    walletModel->unloadWallet();
+}
 void WalletView::lockWallet() {
     if (!walletModel) {
         return;
