@@ -17,7 +17,7 @@ namespace bls {
 
 
     // for test routine
-    std::vector<uint8_t> AggregatePubKeys(std::vector<std::vector<uint8_t>> &vPubKeys);
+    //std::vector<uint8_t> AggregatePubKeys(std::vector<std::vector<uint8_t>> &vPubKeys);
 
     std::vector<uint8_t> Aggregate(std::vector<std::vector<uint8_t>> &vSigs);
 
@@ -37,7 +37,7 @@ namespace bls {
                               const std::vector<std::vector<uint8_t>> &aggPubKeys);
 
 
-    bool VerifySigForMessages(const std::vector<std::vector<uint8_t>> &msgs, const std::vector<uint8_t> &aggSigs,
+    bool VerifySigForMessages(const std::vector<uint8_t> &msgs, const std::vector<uint8_t> &aggSigs,
                               const std::vector<std::vector<uint8_t>> &aggPubKeys);
 
 

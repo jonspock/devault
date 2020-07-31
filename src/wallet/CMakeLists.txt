@@ -58,7 +58,7 @@ if(BUILD_WALLETTOOL)
 		target_sources(bdb-check PRIVATE bdb-check-res.rc)
 	endif()
 
-	target_link_libraries(bdb-check devaultconsensus wallet server bls relic_s)
+	target_link_libraries(bdb-check devaultconsensus wallet server bls)
 endif()
 
 

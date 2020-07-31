@@ -607,7 +607,7 @@ if(BUILD_CLI)
 		target_sources(devault-cli PRIVATE bitcoin-cli-res.rc)
 	endif()
 
-	target_link_libraries(devault-cli bls relic_s common rpcclient ${EVENT_LIBRARY})
+	target_link_libraries(devault-cli bls common rpcclient ${EVENT_LIBRARY})
 endif()
 
 # bitcoin-tx
@@ -617,7 +617,7 @@ if(BUILD_TX)
 		target_sources(devault-tx PRIVATE bitcoin-tx-res.rc)
 	endif()
 
-	target_link_libraries(devault-tx devaultconsensus bls relic_s)
+	target_link_libraries(devault-tx devaultconsensus bls)
 endif()
 
 # bitcoind

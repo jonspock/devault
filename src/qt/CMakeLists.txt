@@ -341,7 +341,6 @@ target_link_libraries(bitcoin-qt-base
   Qt5::Network
   ${QR_LIB}
   bls
-  relic_s
 )
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")

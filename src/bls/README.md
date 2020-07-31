@@ -1,258 +1,306 @@
-### BLS Signatures implementation
+[![Build Status](https://travis-ci.org/herumi/bls.png)](https://travis-ci.org/herumi/bls)
 
-### Branch point commit 5ad49199f8fd35007a85048d841f9dc82f38406a
+# BLS threshold signature
 
-NOTE: THIS LIBRARY IS A DRAFT AND NOT YET REVIEWED FOR SECURITY
+This library is an implementation of BLS threshold signature,
+which supports the new BLS Signatures specified at [Ethereum 2.0 Phase 0](https://github.com/ethereum/eth2.0-specs/blob/dev/specs/phase0/beacon-chain.md#bls-signatures).
 
-Implements BLS signatures with aggregation as in [Boneh, Drijvers, Neven 2018](https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html), using
-[relic toolkit](https://github.com/relic-toolkit/relic) for cryptographic primitives (pairings, EC, hashing).
-The [BLS12-381](https://github.com/zkcrypto/pairing/tree/master/src/bls12_381) curve is used.
+## Support architectures
 
-Features:
-* Non-interactive signature aggregation on identical or distinct messages
-* Aggregate aggregates (trees)
-* Efficient verification (only one pairing per distinct message)
-* Security against rogue public key attack
-* Aggregate public keys and private keys
-* HD (BIP32) key derivation
-* Key and signature serialization
-* Batch verification
-* Signature division (divide an aggregate by a previously verified signature)
-* [Python bindings](https://github.com/Chia-Network/bls-signatures/tree/master/python)
+- Windows Visual Studio / MSYS2(MinGW-w64)
+- Linux
+- macOS
+- Android
+- iOS
+- WebAssembly
 
+## Choice of groups
 
-#### Import the library
-```c++
-#include "bls.hpp"
+This library supports type-3 pairings such as BN curves and BLS curves.
+G1, G2, and GT are a cyclic group of prime order r.
+```
+e : G1 x G2 -> GT ; pairing
 ```
 
-#### Creating keys and signatures
-```c++
-// Example seed, used to generate private key. Always use
-// a secure RNG with sufficient entropy to generate a seed.
-uint8_t seed[] = {0, 50, 6, 244, 24, 199, 1, 25, 52, 88, 192,
-                  19, 18, 12, 89, 6, 220, 18, 102, 58, 209,
-                  82, 12, 62, 89, 110, 182, 9, 44, 20, 254, 22};
+There are two ways for BLS signature.
 
-PrivateKey sk = PrivateKey::FromSeed(seed, sizeof(seed));
-PublicKey pk = sk.GetPublicKey();
+type|SecretKey|PublicKey|Signature|
+-|-|-|-|
+default|Fr|G2|G1|
+ETH2.0 spec (BLS_ETH=1)|Fr|G1|G2|
 
-uint8_t msg[] = {100, 2, 254, 88, 90, 45, 23};
+If you need ETH2.0 spec, then use this library with `BLS_ETH=1` mode.
 
-Signature sig = sk.Sign(msg, sizeof(msg));
+## Support language bindings
+
+language|ETH2.0 spec (PublicKey = G1)|default (PublicKey = G2)|
+--|--|--|
+Go|[bls-eth-go-binary](https://github.com/herumi/bls-eth-go-binary)|[bls-go-binary](https://github.com/herumi/bls-go-binary)|
+WebAssembly (Node.js)|[bls-eth-wasm](https://github.com/herumi/bls-eth-wasm)|[bls-wasm](https://github.com/herumi/bls-wasm)|
+Rust|[bls-eth-rust](https://github.com/herumi/bls-eth-rust)|-|
+
+## Compiled static library with `BLS_ETH=1`
+
+The compiled static libraries with `BLS_ETH=1` mode for {windows, darwin}/amd64, linux/{amd64, arm64} and android/{arm64-v8a, armeabi-v7a}
+are provided at [bls-eth-go-binary/bls/lib](https://github.com/herumi/bls-eth-go-binary/tree/master/bls/lib).
+
+## Basic C API
+
+### Header files
+
+```
+#define BLS_ETH
+#include <mcl/bn384_256.h>
+#include <bls/bls.h>
 ```
 
-#### Serializing keys and signatures to bytes
-```c++
-uint8_t skBytes[PrivateKey::PRIVATE_KEY_SIZE];  // 32 byte array
-uint8_t pkBytes[PublicKey::PUBLIC_KEY_SIZE];    // 48 byte array
-uint8_t sigBytes[Signature::SIGNATURE_SIZE];    // 96 byte array
+Remark: `BLS_ETH` must always be defined before including `bls/bls.h` if you need ETH2.0 spec mode.
 
-sk.Serialize(skBytes);   // 32 bytes
-pk.Serialize(pkBytes);   // 48 bytes
-sig.Serialize(sigBytes); // 96 bytes
+### Initialization
+
+```
+// init library at once before calling the other APIs
+int err = blsInit(MCL_BLS12_381, MCLBN_COMPILED_TIME_VAR);
+if (err != 0) {
+  printf("blsInit err %d\n", err);
+  exit(1);
+}
+
+// use the latest eth2.0 spec
+blsSetETHmode(BLS_ETH_MODE_LATEST);
+```
+Remark:
+- `blsInit` and some functions which modify global settings such as `blsSetETHmode` are NOT thread-safe.
+The other functions are all thread-safe.
+- `blsSetETHmode` is available for only `BLS_ETH=1` mode.
+
+### KeyGen
+
+Init a secret key `sec` and create a public key `pub`.
+```
+blsSecretKey sec;
+blsPublicKey pub;
+
+// init SecretKey sec by random number
+blsSecretKeySetByCSPRNG(&sec);
+
+// get PublicKey pub from SecretKey sec
+blsGetPublicKey(&pub, &sec);
 ```
 
-#### Loading keys and signatures from bytes
-```c++
-// Takes array of 32 bytes
-sk = PrivateKey::FromBytes(skBytes);
+### Sign
 
-// Takes array of 48 bytes
-pk = PublicKey::FromBytes(pkBytes);
+Make a signature `sig` of a message `msg[0..msgSize-1]` by the secret key `sec`.
+```
+blsSignature sig;
+char msg[] = "hello";
+const size_t msgSize = strlen(msg);
 
-// Takes array of 96 bytes
-sig = Signature::FromBytes(sigBytes);
+blsSign(&sig, &sec, msg, msgSize);
 ```
 
-#### Verifying signatures
-```c++
-// Add information required for verification, to sig object
-sig.SetAggregationInfo(AggregationInfo::FromMsg(pk, msg, sizeof(msg)));
+`msg` may contain `\x00` if the correct `msgSize` is specified.
 
-bool ok = ::Verify(sig);
+### Verify
+
+Verify the signature `sig` of the message `msg[0..msgSize-1]` by the public key `pub`.
+```
+// return 1 if it is valid else 0
+int blsVerify(&sig, &pub, msg, msgSize);
 ```
 
-#### Aggregate signatures for a single message
-```c++
-// Generate some more private keys
-seed[0] = 1;
-PrivateKey sk1 = PrivateKey::FromSeed(seed, sizeof(seed));
-seed[0] = 2;
-PrivateKey sk2 = PrivateKey::FromSeed(seed, sizeof(seed));
+### Aggregate Signature
 
-// Generate first sig
-PublicKey pk1 = sk1.GetPublicKey();
-Signature sig1 = sk1.Sign(msg, sizeof(msg));
+Aggregate Signatures `sigVec[0]`, ..., `sigVec[n-1]` to `aggSig`.
+`aggSig` is cleared if `n = 0`.
 
-// Generate second sig
-PublicKey pk2 = sk2.GetPublicKey();
-Signature sig2 = sk2.Sign(msg, sizeof(msg));
-
-// Aggregate signatures together
-vector<Signature> sigs = {sig1, sig2};
-Signature aggSig = ::AggregateSigs(sigs);
-
-// For same message, public keys can be aggregated into one.
-// The signature can be verified the same as a single signature,
-// using this public key.
-vector<PublicKey> pubKeys = {pk1, pk2};
-PublicKey aggPubKey = ::AggregatePubKeys(pubKeys, true);
+```
+void blsAggregateSignature(
+  blsSignature *aggSig,
+  const blsSignature *sigVec,
+  mclSize n
+);
 ```
 
-#### Aggregate signatures for different messages
-```c++
-// Generate one more key and message
-seed[0] = 3;
-PrivateKey sk3 = PrivateKey::FromSeed(seed, sizeof(seed));
-PublicKey pk3 = sk3.GetPublicKey();
-uint8_t msg2[] = {100, 2, 254, 88, 90, 45, 23};
+### FastAggregateVerify
 
-// Generate the signatures, assuming we have 3 private keys
-sig1 = sk1.Sign(msg, sizeof(msg));
-sig2 = sk2.Sign(msg, sizeof(msg));
-Signature sig3 = sk3.Sign(msg2, sizeof(msg2));
+Verify a signature `sig` of a message `msg[0..msgSize-1]` by `pubVec[0]`, ..., `pubVec[n-1]`.
 
-// They can be noninteractively combined by anyone
-// Aggregation below can also be done by the verifier, to
-// make batch verification more efficient
-vector<Signature> sigsL = {sig1, sig2};
-Signature aggSigL = ::AggregateSigs(sigsL);
-
-// Arbitrary trees of aggregates
-vector<Signature> sigsFinal = {aggSigL, sig3};
-Signature aggSigFinal = ::AggregateSigs(sigsFinal);
-
-// Serialize the final signature
-aggSigFinal.Serialize(sigBytes);
+```
+int blsFastAggregateVerify(
+  const blsSignature *sig,
+  const blsPublicKey *pubVec,
+  mclSize n,
+  const void *msg,
+  mclSize msgSize
+);
 ```
 
-#### Verify aggregate signature for different messages
-```c++
-// Deserialize aggregate signature
-aggSigFinal = Signature::FromBytes(sigBytes);
+### AggregateVerify
 
-// Create aggregation information (or deserialize it)
-AggregationInfo a1 = AggregationInfo::FromMsg(pk1, msg, sizeof(msg));
-AggregationInfo a2 = AggregationInfo::FromMsg(pk2, msg, sizeof(msg));
-AggregationInfo a3 = AggregationInfo::FromMsg(pk3, msg2, sizeof(msg2));
-vector<AggregationInfo> infos = {a1, a2};
-AggregationInfo a1a2 = AggregationInfo::MergeInfos(infos);
-vector<AggregationInfo> infos2 = {a1a2, a3};
-AggregationInfo aFinal = AggregationInfo::MergeInfos(infos2);
+- `pubVec` is `n` array of PublicKey
+- `msgVec` is `n * msgSize`-byte array, which concatenates `n`-byte messages of length `msgSize`.
 
-// Verify final signature using the aggregation info
-aggSigFinal.SetAggregationInfo(aFinal);
-ok = ::Verify(aggSigFinal);
+Verify Signature `sig` of (Message `msgVec[msgSize * i..msgSize * (i+1)-1]` and `pubVec[i]`) for i = `0`, ..., `n-1`.
 
-// If you previously verified a signature, you can also divide
-// the aggregate signature by the signature you already verified.
-ok = ::Verify(aggSigL);
-vector<Signature> cache = {aggSigL};
-aggSigFinal = aggSigFinal.DivideBy(cache);
-
-// Final verification is now more efficient
-ok = ::Verify(aggSigFinal);
+```
+int blsAggregateVerifyNoCheck(
+  const blsSignature *sig,
+  const blsPublicKey *pubVec,
+  const void *msgVec,
+  mclSize msgSize,
+  mclSize n
+);
 ```
 
-#### Aggregate private keys
-```c++
-vector<PrivateKey> privateKeysList = {sk1, sk2};
-vector<PublicKey> pubKeysList = {pk1, pk2};
+REMARK : `blsAggregateVerifyNoCheck` does not check
+- `sig` has the correct order
+- every `n`-byte messages of length `msgSize` are different from each other
 
-// Create an aggregate private key, that can generate
-// aggregate signatures
-const PrivateKey aggSk = ::AggregatePrivKeys(
-        privateKeys, pubKeys, true);
+Check them at the caller if necessary.
 
-Signature aggSig3 = aggSk.Sign(msg, sizeof(msg));
+## Functions corresponding to ETH2.0 spec names
+
+bls.h | eth2.0 spec name|
+------|-----------------|
+blsSign|Sign|
+blsVerify|Verify|
+blsAggregateSignature|Aggregate|
+blsFastAggregateVerify|FastAggregateVerify|
+blsAggregateVerifyNoCheck|AggregateVerify|
+
+### Setter
+
+```
+int blsSecretKeySetLittleEndianMod(blsSecretKey *sec, const void *buf, mclSize bufSize);
+```
+Set `sec` to (`buf[0..bufSize-1]` as little endian) mod r and return 0 if `bufSize <= 64` else -1.
+
+
+### Serialization
+
+```
+mclSize blsSecretKeySerialize(void *buf, mclSize maxBufSize, const blsSecretKey *sec);
+mclSize blsPublicKeySerialize(void *buf, mclSize maxBufSize, const blsPublicKey *pub);
+mclSize blsSignatureSerialize(void *buf, mclSize maxBufSize, const blsSignature *sig);
+```
+Serialize the instance to `buf[0..maxBufSize-1]` and return written byte size if success else 0.
+
+```
+mclSize blsSecretKeyDeserialize(blsSecretKey *sec, const void *buf, mclSize bufSize);
+mclSize blsPublicKeyDeserialize(blsPublicKey *pub, const void *buf, mclSize bufSize);
+mclSize blsSignatureDeserialize(blsSignature *sig, const void *buf, mclSize bufSize);
+```
+Deserialize `buf[0..bufSize-1]` to the instance and return read byte size if success else 0.
+
+
+### Check order
+
+Check whether `sig` and `pub` have the correct order `r`.
+
+```
+// return 1 if it is valid else 0
+int blsSignatureIsValidOrder(const blsSignature *sig);
+int blsPublicKeyIsValidOrder(const blsPublicKey *pub);
 ```
 
-#### HD keys
-```c++
-// Random seed, used to generate master extended private key
-uint8_t seed[] = {1, 50, 6, 244, 24, 199, 1, 25, 52, 88, 192,
-                  19, 18, 12, 89, 6, 220, 18, 102, 58, 209,
-                  82, 12, 62, 89, 110, 182, 9, 44, 20, 254, 22};
+## API for k-of-n threshold signature
 
-ExtendedPrivateKey esk = ExtendedPrivateKey::FromSeed(
-        seed, sizeof(seed));
+1. Prepare k secret keys (msk).
+1. Make n secret keys from msk by `blsSecretKeyShare`.
+1. Each user makes the public key from the given secret key.
+1. Each user makes a signature for the same message.
+1. Any k subset of n signatures can recover the master signature by `blsSignatureRecover`.
 
-ExtendedPublicKey epk = esk.GetExtendedPublicKey();
+See [sample/minsample.c](https://github.com/herumi/bls/blob/master/sample/minsample.c#L20) for the details.
 
-// Use i >= 2^31 for hardened keys
-ExtendedPrivateKey skChild = esk.PrivateChild(0)
-                                .PrivateChild(5);
+```
+int blsSecretKeyShare(blsSecretKey *sec, const blsSecretKey *msk, mclSize k, const blsId *id);
+```
+Make `sec` corresponding to `id` from `{msk[i] for i = 0, ..., k-1}`.
 
-ExtendedPublicKey pkChild = epk.PublicChild(0)
-                               .PublicChild(5);
+```
+int blsSignatureRecover(blsSignature *sig, const blsSignature *sigVec, const blsId *idVec, mclSize n);
+```
+Recover `sig` from `{(sigVec[i], idVec[i]) for i = 0, ..., n-1}`.
 
-// Serialize extended keys
-uint8_t buffer1[ExtendedPublicKey::ExtendedPublicKeySize]   // 93 bytes
-uint8_t buffer2[ExtendedPrivateKey::ExtendedPrivateKeySize] // 77 bytes
+## Multi aggregate signature (experimental)
 
-pkChild.Serialize(buffer1);
-skChild.Serialize(buffer2);
+`blsMultiAggregateSignature` and `blsMultiAggregatePublicKey` are provided for [BLS Multi-Signatures With Public-Key Aggregation](https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html).
+The hash function is temporary.
+See [blsMultiAggregateTest](https://github.com/herumi/bls/blob/master/test/bls_c_test.hpp#L356).
+
+```
+void blsMultiAggregateSignature(
+  blsSignature *aggSig,
+  blsSignature *sigVec,
+  blsPublicKey *pubVec,
+  mclSize n
+);
+```
+Set `aggSig = sum_{i=0^n-1} sigVec[i] t_i, where (t_1, ..., t_n) = Hash({pubVec[0..n-1]})`.
+
+```
+void blsMultiAggregatePublicKey(
+  blsPublicKey *aggPub,
+  blsPublicKey *pubVec,
+  mclSize n
+);
+```
+Set `aggPub = sum_{i=0^n-1} pubVec[i] t_i, where (t_1, ..., t_n) = Hash({pubVec[0..n-1]})`.
+
+## How to build a static library by ownself
+
+The following description is for `BLS_ETH=1` mode.
+Remove it if you need PublicKey as G1.
+
+### Preliminaries
+
+Create a working directory (e.g., work) and clone the following repositories.
+```
+mkdir work
+cd work
+git clone git://github.com/herumi/mcl.git
+git clone git://github.com/herumi/bls.git
+git clone git://github.com/herumi/cybozulib_ext ; for only Windows
 ```
 
-### Build
-Cmake and a c++ compiler are required for building.
-```bash
-git submodule init
-git submodule update
-mkdir build
-cd build
-cmake ../
-cmake --build . -- -j 6
+### Build static library for Linux and macOS
+
+```
+cd work/mcl
+make lib/libmcl.a
+cd ../bls
+make BLS_ETH=1 lib/libbls384_256.a
+```
+If the option `MCL_USE_GMP=0` (resp.`MCL_USE_OPENSSL=0`) is used then GMP (resp. OpenSSL) is not used.
+
+### Build static library for Windows
+
+```
+cd work/bls
+mklib eth
 ```
 
-### Run tests
-```bash
-./build/runtest
-```
+### Build static library for Android
 
-### Run benchmarks
-```bash
-./build/runbench
-```
+See [bls-eth-go-binary](https://github.com/herumi/bls-eth-go-binary)
 
-### Link the library to use it
-```bash
-g++ -Wl,-no_pie  -Ibls-signatures/contrib/relic/include -Ibls-signatures/build/contrib/relic/incl
-ude -Ibls-signatures/src/  -L./bls-signatures/build/ -l bls  yourfile.cpp
-```
+## History
+- 2020/May/13 : `blsSetETHmode()` supports `BLS_ETH_MODE_DRAFT_07` defined at [BLS12381G2_XMD:SHA-256_SSWU_RO_](https://www.ietf.org/id/draft-irtf-cfrg-hash-to-curve-07.html#name-bls12381g2_xmdsha-256_sswu_).
+- 2020/Apr/02 : *experimental* add blsMultiAggregateSignature/blsMultiAggregatePublicKey [multiSig](https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html)
+  - The hash function is temporary, which may be modified in the future.
+- 2020/Mar/26 : DST of hash-to-curve of [mcl](https://github.com/herumi/mcl) is changed, so the output has also changed for `BLS_ETH_MODE_DRAFT_06`.
+- 2020/Mar/15 : `blsSetETHmode()` supports `BLS_ETH_MODE_DRAFT_06` defined at [draft-irtf-cfrg-hash-to-curve](https://cfrg.github.io/draft-irtf-cfrg-hash-to-curve/draft-irtf-cfrg-hash-to-curve.txt) at March 2020. But it has not yet fully tested.
 
-### Notes on dependencies
-Changes performed to relic: Added config files for Chia, and added gmp include in relic.h.
-Allow passing in hash to ep2_map. Custom inversion function. Note: relic is an LGPL 2.1 dependency.
+## License
 
-Libsodium and GMP are optional dependencies: libsodium gives secure memory allocation,
-and GMP speeds up the library by ~ 3x. To install them, unzip the directories in contrib,
-and follow the instructions for each repo.
+modified new BSD License
+http://opensource.org/licenses/BSD-3-Clause
 
-### Discussion
-Discussion about this library and other Chia related development is on Keybase.
-Install Keybase, and run the following to join the Chia public channels:
+## Author
 
-```bash
-keybase team request-access chia_network
-```
+MITSUNARI Shigeo(herumi@nifty.com)
 
-### Code style
-* Always use uint8_t for bytes
-* Use size_t for size variables
-* Uppercase method names
-* Prefer static constructors
-* Avoid using templates
-* Objects allocate and free their own memory
-* Use cpplint with default rules
-
-### TODO
-* Serialize aggregation info
-* Optimize performance
-* Secure allocation during signing, key derivation
-* Threshold signatures
-* Full python implementation
-* Remove unnecessary dependency files
-* Constant time and side channel attacks
-* Adaptor signatures / Blind signatures
+## Sponsors welcome
+[GitHub Sponsor](https://github.com/sponsors/herumi)

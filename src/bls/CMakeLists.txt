@@ -1,106 +1,51 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.1.0 FATAL_ERROR)
+cmake_minimum_required (VERSION 2.6)
+project(bls CXX ASM C)
 
-project(bls)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-#------------------- ------------------- ------------------- ------------------- -------------------
-# For Relic
-#------------------- ------------------- ------------------- ------------------- -------------------
-##SET(CMAKE_VERBOSE_MAKEFILE OFF)
-if(CMAKE_SIZEOF_VOID_P EQUAL 4)
-   set(WSIZE 32)
-   set(AFLAGS "-m32")
+set(LIBS mcl gmp)
+
+option(
+	BLS_ETH
+	"Ethereum 2.0 spec"
+	"OFF"
+)
+
+if(BLS_ETH)
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DBLS_ETH")
+endif()
+
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
+
+if(MSVC)
+    if(MSVC_RUNTIME_DLL)
+        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} /MD /W4 /Oy /Ox /EHsc /GS- /Zi /DNDEBUG /DNOMINMAX")
+        set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /MDd /W4 /DNOMINMAX")
+    else()
+		set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} /MT /W4 /Oy /Ox /EHsc /GS- /Zi /DNDEBUG /DNOMINMAX")
+	    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} /MTd /W4 /DNOMINMAX")
+    endif()
 else()
-  set(WSIZE 64)
-  set(AFLAGS "-m64")
-endif()
-set(ALIGN 1)
-set(ARITH "GMP")
-set(ALLOC "AUTO")
-set(STBIN "OFF" CACHE STRING "")
-set(FP_PRIME 381)
-set(RAND "HASHD")
-set(EC_CUR "PRIME")
-set(QUIET 1)
-set(BENCH 0)
-set(TESTS 0)
-
-IF (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  add_definitions("-DWIND_VER")
-ENDIF()
-
-IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
-  set(DSEED "UDEV" CACHE STRING "")
-  set(FP_QNRES "off" CACHE STRING "")
-ELSEIF (${CMAKE_SYSTEM_NAME} MATCHES "Windows")
-  set(SEED "WCGR" CACHE STRING "")
-  set(FP_QNRES "on" CACHE STRING "")
-ELSE()
-  set(DSEED "DEV" CACHE STRING "")
-  set(FP_QNRES "on" CACHE STRING "")
-ENDIF()
-
-set(FPX_METHD "INTEG;INTEG;LAZYR" CACHE STRING "")
-
-string(TOUPPER ${ARITH} ARITH)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/relic/include/relic_conf.h.in ${CMAKE_BINARY_DIR}/relic_conf.h @ONLY)
-message(STATUS "Configured ${CMAKE_CURRENT_SOURCE_DIR}/include/relic_conf.h.in")
-string(TOLOWER ${ARITH} ARITH)
-
-
-# THIS IS ONLY DEFINED FOR STANDALONE BUILDS
-if (BUILD_BLS)
-
-  set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/..)
-  
-  # Add path for custom modules
-  set(CMAKE_MODULE_PATH
-	  ${CMAKE_MODULE_PATH}
-	  ${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/modules
-    )
-  
-  include(AddCompilerFlags)
-  check_cxx_compiler_flag(-std=c++17 HAVE_FLAG_STD_CXX17)
-  if (HAVE_FLAG_STD_CXX17)
-    set(CMAKE_CXX_STANDARD 17)
-    message(STATUS "Compiler supports C++17")
-  else()
-    message(ERROR "Compiler must at least support C++17")
-  endif()
-
-  add_compiler_flags(-Wno-cpp -Wno-unused-function -Wno-nonnull-compare -Wno-implicit-fallthrough)
-
-  add_subdirectory(config)
+	if("${CFLAGS_OPT_USER}" STREQUAL "")
+		set(CFLAGS_OPT_USER "-O3 -DNDEBUG -march=native")
+	endif()
+	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra -Wformat=2 -Wcast-qual -Wcast-align -Wwrite-strings -Wfloat-equal -Wpointer-arith ${CFLAGS_OPT_USER}")
+	set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS}")
 endif()
 
-
-  
-add_subdirectory(relic)
-
-file(GLOB BLS_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.hpp)
-file(GLOB OTHER_HEADERS ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
-source_group("BlsHeaders" FILES ${BLS_HEADERS} ${OTHER_HEADERS})
-
-add_library(bls ${BLS_HEADERS} ${OTHER_HEADERS}
-  ${CMAKE_CURRENT_SOURCE_DIR}/privatekey.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/publickey.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/bls.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/bls_functions.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/util.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/elements.cpp
-  ${CMAKE_CURRENT_SOURCE_DIR}/schemes.cpp
-  )
-
-target_include_directories(bls
-  PRIVATE
-  ${include_directories}
-  Boost::headers
+include_directories(include/
   ${GMP_INCLUDE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}//relic/include
-  ${CMAKE_CURRENT_SOURCE_DIR}/../
-  ${CMAKE_BINARY_DIR} # for relic_conf.h
-  ${CMAKE_BINARY_DIR}/src # for bitcoin-config.h
-  )
+  ${CMAKE_CURRENT_SOURCE_DIR}/..
+  ${CMAKE_CURRENT_BINARY_DIR}/..
+  ${CMAKE_CURRENT_SOURCE_DIR}/mcl/include)
 
-target_link_libraries(bls relic_s sodium)
+add_subdirectory(mcl)
+
+add_library(bls src/bls_c384.cpp bls_functions.cpp)
+target_link_libraries(bls mcl ${GMP_LIBRARY})
+
+
 
 
