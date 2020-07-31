@@ -25,9 +25,6 @@
 namespace bls {
 /** An encapsulated public key. */
 class PublicKey {
- friend class InsecureSignature;
- friend class Signature;
- friend class ExtendedPublicKey;
  friend class Threshold;
  friend class BLS;
  public:
