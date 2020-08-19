@@ -5187,15 +5187,9 @@ CWallet::CreateWalletFromFile(const CChainParams &chainParams,
             walletInstance->SetLegacyWalletFlags();
         }
       
-        // Can happen on any run - do after loading WalletFlag from DB file & after potentially setting as Legacy
-      /*
-        if (gArgs.GetBoolArg("-upgradebls",false)) {
-            walletInstance->SetWalletBLS();
-        }
-       */
-
     }
-
+    // Disable upgradewallet for now
+    /*
     if (gArgs.GetBoolArg("-upgradewallet", fFirstRun)) {
         int nMaxVersion = gArgs.GetArg("-upgradewallet", 0);
         // The -upgradewallet without argument case
@@ -5215,6 +5209,7 @@ CWallet::CreateWalletFromFile(const CChainParams &chainParams,
 
         walletInstance->SetMaxVersion(nMaxVersion);
     }
+     */
 
 
 
