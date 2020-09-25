@@ -17,7 +17,6 @@ option(BUILD_ZMQ "Activate the ZeroMQ functionalities" ON)
 option(BUILD_CLI "Build devault-cli" ON)
 option(BUILD_TX "Build devault-tx" ON)
 option(BUILD_QT "Build devault-qt" ON)
-option(BUILD_STD_FILESYSTEM "Enable trying to use std::filesystem" ON)
 option(ENABLE_HARDENING "Harden the executables" ON)
 option(ENABLE_QRCODE "Enable QR code display" ON)
 option(ENABLE_UPNP "Enable UPnP support" ON)
@@ -45,7 +44,6 @@ add_feature_info(WITH_BENCH BUILD_BENCH "Build benchmark code")
 add_feature_info(WITH_CTESTS BUILD_CTESTS "Build cmake unit tests")
 add_feature_info(WITH_REDUCED_EXPORTS ENABLE_REDUCE_EXPORTS "Reduce amount of exported symbols")
 add_feature_info(WITH_QRCODE ENABLE_QRCODE "Enable QR code display")
-add_feature_info(WITH_STD_FILESYSTEM BUILD_STD_FILESYSTEM "Enable compiler to use std::filesystem")
 
 set(CMAKE_REQUIRED_QUIET true)
 
@@ -194,15 +192,8 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # HAVE_VARIANT means support for std::variant and std::optional
   if (DARWIN_MAJOR_VERSION GREATER 18) # 18 is Mojave
     message(STATUS "Will use std c++ filesystem since > Mojave")
-    set(BUILD_STD_FILESYSTEM ON)
   endif()
   add_definitions("-DOS_MACOSX -DBOOST_NO_AUTO_PTR")
-elseif (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-  if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 9.0)
-    message(STATUS "Will use std c++ filesystem since GCC > 9.0")
-    set(BUILD_STD_FILESYSTEM ON)
-  endif()
-  add_compiler_flags(-Wno-cpp -Wno-unused-function -Wno-nonnull-compare -Wno-implicit-fallthrough)
 else()
   # secp256k1 Linux gcc
   add_compiler_flags(-Wno-cpp -Wno-unused-function -Wno-nonnull-compare -Wno-implicit-fallthrough)
@@ -251,16 +242,11 @@ add_subdirectory(crypto)
 
 # Boost packages required (Later check for and replace with std::filesystem
 # but currently not working with any compilers)
-if (BUILD_STD_FILESYSTEM)
-  find_package(Filesystem)
-  if (Filesystem_FOUND)
-    message(STATUS "Found std::filesystem , adding define NO_BOOST_FILESYSTEM")
-    add_definitions("-DNO_BOOST_FILESYSTEM")
-  else()
-    set(BOOST_PACKAGES_REQUIRED filesystem system)
-  endif()
+find_package(Filesystem)
+if (Filesystem_FOUND)
+  message(STATUS "Found std::filesystem")
 else()
-  set(BOOST_PACKAGES_REQUIRED filesystem system) # system needed if boost < 1.69
+  message(ERROR "Need std::filesystem support")
 endif()
   
 # Can change to LevelDB if needed
@@ -387,22 +373,9 @@ function(prepend var prefix)
 	set(${var} "${listVar}" PARENT_SCOPE)
 endfunction(prepend)
 
-if (Filesystem_FOUND)
-  # Still need Boost header files, but no linkage
-  message(STATUS "Find Boost for headers use only")
-  find_package(Boost CONFIG 1.69 COMPONENTS headers) # bump up requirement to 1.69 so boost::system is not needed
-  target_include_directories(util PUBLIC    ${GMP_INCLUDE_DIR}   Boost::headers) # public for now
-  target_link_libraries(util univalue crypto sodium std::filesystem)
-else()
-  set(Boost_USE_STATIC_LIBS On)
-  prepend(BOOST_LIBRARIES "Boost::" ${BOOST_PACKAGES_REQUIRED})
-  if (TOOLCHAIN_PREFIX) 
-    find_package(Boost CONFIG 1.65 REQUIRED COMPONENTS ${BOOST_PACKAGES_REQUIRED})
-  else()
-    find_package(Boost 1.65 REQUIRED COMPONENTS ${BOOST_PACKAGES_REQUIRED})
-  endif()
-  target_link_libraries(util univalue crypto sodium ${BOOST_LIBRARIES})
-endif()
+find_package(Boost CONFIG 1.69 COMPONENTS headers) # 1.69 or higher so only headers needed
+target_include_directories(util PUBLIC ${GMP_INCLUDE_DIR} Boost::headers) # public for now
+target_link_libraries(util univalue crypto sodium std::filesystem)
 
 #--------------------------------------------------------------------------------
 # DeVault (after boost setup)
