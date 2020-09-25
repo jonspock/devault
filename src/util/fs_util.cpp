@@ -409,14 +409,14 @@ void SetupEnvironment() {
     // in multithreading environments, it is set explicitly by the main thread.
     // A dummy locale is used to extract the internal default locale, used by
     // fs::path, which is then used to explicitly imbue the path.
-#ifndef NO_BOOST_FILESYSTEM    
+  /* ??
     std::locale loc = fs::path::imbue(std::locale::classic());
 #ifndef WIN32
     fs::path::imbue(loc);
 #else
     fs::path::imbue(std::locale(loc, new std::codecvt_utf8_utf16<wchar_t>()));
 #endif
-#endif
+   */
 }
 
 
@@ -568,9 +568,5 @@ bool CheckDiskSpace(uint64_t nAdditionalBytes, bool blocks_dir) {
 }
 
 fs::path AbsPathForConfigVal(const fs::path &path, bool net_specific) {
-#ifdef NO_BOOST_FILESYSTEM
-    return GetDataDir(net_specific) / path;
-#else
-    return fs::absolute(path, GetDataDir(net_specific));
-#endif     
+    return GetDataDir(net_specific) / path;   
 }

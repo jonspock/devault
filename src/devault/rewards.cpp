@@ -661,11 +661,7 @@ void CColdRewards::RemoveOlderDumpFile() {
     if (found_log != std::string::npos && found_debug != std::string::npos) {
       auto last_write_time = fs::last_write_time(it.path());
       std::time_t cftime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-#ifdef NO_BOOST_FILESYSTEM
       auto last_write_int = last_write_time.time_since_epoch().count();
-#else
-      auto last_write_int = last_write_time;
-#endif
       if ((cftime - last_write_int) > (60 * 60 * 24 * days_to_keep)) {
         LogPrintf("Removing %s since older than %d day\n", it.path().filename().string(), days_to_keep);
         fs::remove(it.path());

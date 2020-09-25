@@ -400,11 +400,7 @@ bool BerkeleyBatch::VerifyEnvironment(const fs::path &file_path,
     // Wallet file must be a plain filename without a directory
     fs::path WF = walletFile;
 
-#ifndef NO_BOOST_FILESYSTEM
-    if (walletFile != fs::basename(walletFile) + fs::extension(walletFile)) {
-#else
     if (is_directory(WF)) {
-#endif
         errorStr = strprintf(_("Wallet %s resides outside wallet directory %s"),
                              walletFile, walletDir.string());
         return false;
@@ -907,11 +903,7 @@ bool BerkeleyDatabase::Backup(const std::string &strDest) {
                                   pathDest.string());
                         return false;
                     }
-#ifdef NO_BOOST_FILESYSTEM
                     fs::copy_file(pathSrc, pathDest);
-#else
-                    fs::copy_file(pathSrc, pathDest, fs::copy_option::overwrite_if_exists);
-#endif
                     LogPrintf("copied %s to %s\n", strFile, pathDest.string());
                     return true;
                 } catch (const fs::filesystem_error &e) {

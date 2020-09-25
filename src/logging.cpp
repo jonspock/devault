@@ -226,12 +226,8 @@ std::string BCLog::Logger::RenameLastDebugFile(){
   fs::path oldLog = GetDataDir();
   if (fs::exists(pathLog)) {
     auto last_write_time = fs::last_write_time(pathLog);
-#ifdef NO_BOOST_FILESYSTEM
     // This may be implementation dependent but need to divide for Mac OS Catalina's use of filesystem
     auto last_write_int = last_write_time.time_since_epoch().count()/1000000000;
-#else
-    auto last_write_int = last_write_time; // no change
-#endif
     std::string s = "debug-"+FormatDebugLogDateTime(last_write_int)+".log";
     oldLog /= s;
     fs::rename(pathLog, oldLog);
@@ -254,11 +250,7 @@ void BCLog::Logger::RemoveOlderDebugFiles() {
         if (found_log !=std::string::npos && found_debug != std::string::npos) {
             auto last_write_time = fs::last_write_time(it.path());
             std::time_t cftime = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-#ifdef NO_BOOST_FILESYSTEM
-          auto last_write_int = last_write_time.time_since_epoch().count();
-#else
-          auto last_write_int = last_write_time;
-#endif
+            auto last_write_int = last_write_time.time_since_epoch().count();
             if ((cftime - last_write_int) > (60*60*24*days_to_keep)) {
                 LogPrintf("Removing %s since older than %d day\n",it.path().filename().string(),days_to_keep);
                 fs::remove(it.path());

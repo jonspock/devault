@@ -8,20 +8,9 @@
 
 #include <cstdio>
 #include <string>
-
-#ifdef NO_BOOST_FILESYSTEM
 #include <filesystem>
-#else
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path.hpp>
-#endif
 
-#ifdef NO_BOOST_FILESYSTEM
 namespace fs = std::filesystem;
-#else
-/** Filesystem operations and types */
-namespace fs = boost::filesystem;
-#endif
 
 /** Bridge operations to C stdio */
 namespace fsbridge {

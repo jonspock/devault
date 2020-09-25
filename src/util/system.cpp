@@ -14,13 +14,8 @@
 #include <util/strencodings.h>
 #include <util/time.h>
 
-#ifndef NO_BOOST_FILESYSTEM
-#include <boost/filesystem/fstream.hpp>
-using fs::ifstream;
-#else
 #include <fstream>
 using std::ifstream;
-#endif
 
 #include <cstdarg>
 

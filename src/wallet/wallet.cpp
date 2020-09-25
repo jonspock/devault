@@ -5042,17 +5042,10 @@ bool CWallet::Verify(const CChainParams &chainParams, interfaces::Chain &chain,
     // LOCK(cs_wallet);  -- not yet since static
     const fs::path &wallet_path = location.GetPath();
     fs::file_type path_type = fs::symlink_status(wallet_path).type();
-#ifdef NO_BOOST_FILESYSTEM
     if (!(path_type == fs::file_type::not_found || path_type == fs::file_type::directory ||
           (path_type == fs::file_type::symlink && fs::is_directory(wallet_path)) ||
           (path_type == fs::file_type::regular &&
            fs::path(location.GetName()).filename() == location.GetName()))) {
-#else
-    if (!(path_type == fs::file_not_found || path_type == fs::directory_file ||
-          (path_type == fs::symlink_file && fs::is_directory(wallet_path)) ||
-          (path_type == fs::regular_file &&
-           fs::path(location.GetName()).filename() == location.GetName()))) {
-#endif
         error_string =
             strprintf("Invalid -wallet path '%s'. -wallet path should point to "
                       "a directory where wallet.dat and "

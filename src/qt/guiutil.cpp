@@ -29,18 +29,11 @@
 #include <interfaces/node.h>
 
 // for BoostPathToQString
-#ifdef NO_BOOST_FILESYSTEM
 #include <fstream>
 using std::ifstream;
 using std::ofstream;
 using std::fstream;
-#else
-#include <boost/filesystem/detail/utf8_codecvt_facet.hpp>
-#include <boost/filesystem/fstream.hpp>
-using fs::fstream;
-using fs::ifstream;
-using fs::ofstream;
-#endif
+
 
 #ifdef WIN32
 #ifdef _WIN32_WINNT
