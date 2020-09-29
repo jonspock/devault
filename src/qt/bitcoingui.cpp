@@ -664,8 +664,8 @@ void BitcoinGUI::setWalletController(WalletController *wallet_controller) {
     }
 }
 
-void BitcoinGUI::addWallet(WalletModel *walletModel) {
-    if (!walletFrame) return;
+bool BitcoinGUI::addWallet(WalletModel *walletModel) {
+    if (!walletFrame) return false;
     const QString display_name = walletModel->getDisplayName();
     setWalletActionsEnabled(true);
     rpcConsole->addWallet(walletModel);
@@ -675,6 +675,7 @@ void BitcoinGUI::addWallet(WalletModel *walletModel) {
         m_wallet_selector_label_action->setVisible(true);
         m_wallet_selector_action->setVisible(true);
 //    }
+    return walletFrame;
 }
 
 void BitcoinGUI::removeWallet(WalletModel *walletModel) {
@@ -694,9 +695,9 @@ void BitcoinGUI::removeWallet(WalletModel *walletModel) {
     updateWindowTitle();
 }
 
-void BitcoinGUI::setCurrentWallet(WalletModel *wallet_model) {
+bool BitcoinGUI::setCurrentWallet(WalletModel *wallet_model) {
     if (!walletFrame) {
-        return;
+        return false;
     }
     walletFrame->setCurrentWallet(wallet_model);
     for (int index = 0; index < m_wallet_selector->count(); ++index) {
@@ -707,15 +708,14 @@ void BitcoinGUI::setCurrentWallet(WalletModel *wallet_model) {
         }
     }
     updateWindowTitle();
+    return walletFrame;
 }
 #endif
 
-void BitcoinGUI::setCurrentWalletBySelectorIndex(int index) {
+bool BitcoinGUI::setCurrentWalletBySelectorIndex(int index) {
     WalletModel *wallet_model =
         m_wallet_selector->itemData(index).value<WalletModel *>();
-    if (wallet_model) {
-        setCurrentWallet(wallet_model);
-    }
+    return setCurrentWallet(wallet_model);
 }
 
 void BitcoinGUI::removeAllWallets() {
