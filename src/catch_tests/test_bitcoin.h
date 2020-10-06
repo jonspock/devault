@@ -88,9 +88,8 @@ struct TestMemPoolEntryHelper {
     TestMemPoolEntryHelper()
         : nFee(), nTime(0), nHeight(1), spendsCoinbase(false), sigOpCost(4) {}
 
-    CTxMemPoolEntry FromTx(const CMutableTransaction &tx,
-                           CTxMemPool *pool = nullptr);
-    CTxMemPoolEntry FromTx(const CTransaction &tx, CTxMemPool *pool = nullptr);
+    CTxMemPoolEntry FromTx(const CMutableTransaction &tx);
+    CTxMemPoolEntry FromTx(const CTransaction &tx);
 
     // Change the default value
     TestMemPoolEntryHelper &Fee(Amount _fee) {
