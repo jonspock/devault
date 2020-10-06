@@ -2245,18 +2245,18 @@ XXXXX - Partial upgrade of wallet stuff
       [secp256k1] fix tests.c in the count == 0 case
       Merge #13429: Return the script type from Solver
       [CI] Increase the coverage for the build-diff and build-master configs
-      Optimization: don't add txn back to mempool after 10 invalidates
+#     Optimization: don't add txn back to mempool after 10 invalidates
       [CI] Use ninja targets instead of calling binaries
       Move the functional test temporary directory under the build directory
       Move the JUnit file to the temporary directory
-      Prevent callback overruns in InvalidateBlock and RewindBlockIndex
+#     Prevent callback overruns in InvalidateBlock and RewindBlockIndex
       [CMAKE] Add compiler flags to properties rather than CFLAGS/CXXFLAGS
       [CMAKE] Remove extra -fPIE flag
       [secp256k1] scratch: add stack frame support
       Revert "Call FinalizeBlockAndInvalidate without cs_main held"
       Call FinalizeBlockAndInvalidate without cs_main held
       Add a script to generate sha256sums from Gitian output
-      Release cs_main during InvalidateBlock iterations
+#     Release cs_main during InvalidateBlock iterations
 #     Call InvalidateBlock without cs_main held
 #     Call RewindBlockIndex without cs_main held
 #     [wallet] Support creating a blank wallet
