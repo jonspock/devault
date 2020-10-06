@@ -2375,12 +2375,12 @@ XXXXX wallet: detecting duplicate wallet by comparing the db filename.
       Merge #15101: gui: Add WalletController
       Merge #14451: Allow building GUI without BIP70 support
       Fix heap-use-after-free in activation_tests
-      Remove GetPriority from CCoinsViewCache
+#     Remove GetPriority from CCoinsViewCache
       Bump version to 0.20.10
-      Remove priority from CTxMemPoolEntry
-      kill CTxMemPoolEntry::GetPriority
-      Remove deprecated startingpriority and currentpriority from RPC
-      CompareIteratorByHash => CompareIteratorById
+#     Remove priority from CTxMemPoolEntry
+#     kill CTxMemPoolEntry::GetPriority
+#     Remove deprecated startingpriority and currentpriority from RPC
+#     CompareIteratorByHash => CompareIteratorById
 #     Remove TxCoinAgePriorityCompare
 #     Do not log priority when using -printpriority
       [cmake] Use more sensible name for individual test targets
