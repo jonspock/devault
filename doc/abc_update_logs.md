@@ -2271,7 +2271,7 @@ XXXXX - Partial upgrade of wallet stuff
       Merge #13988: Add checks for settxfee reasonableness
       Merge #13142: Separate IsMine from solvability
       move ScriptExecutionMetrics to its own file
-      move MANDATORY_SCRIPT_VERIFY_FLAGS to policy.h
+#     move MANDATORY_SCRIPT_VERIFY_FLAGS to policy.h
       [tests] remove test_bitcoin.h dependency on txmempool.h
       Fix -Wshadow warnings
       test: add "diamond" unit test to MempoolAncestryTests
