@@ -209,12 +209,12 @@ CBlock TestChain100Setup::CreateAndProcessBlock(const std::vector<CMutableTransa
 
 TestChain100Setup::~TestChain100Setup() = default;
 
-CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CMutableTransaction &tx, CTxMemPool *pool) {
-  CTransaction txn(tx);
-  return FromTx(txn, pool);
+CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CMutableTransaction &tx) {
+  CTransaction ctx(tx);
+  return FromTx(ctx);
 }
 
-CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn, CTxMemPool *pool) {
+CTxMemPoolEntry TestMemPoolEntryHelper::FromTx(const CTransaction &txn) {
   return CTxMemPoolEntry(MakeTransactionRef(txn), nFee, nTime, nHeight, spendsCoinbase,
                          sigOpCost, lp);
 }
