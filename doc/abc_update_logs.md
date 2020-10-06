@@ -2355,8 +2355,8 @@ XXXXX wallet: detecting duplicate wallet by comparing the db filename.
       Update chainparams
       Fix protobuf linking when building without the wallet
       finish backporting PR9602 - misc
-      finish backporting PR9602 : remove unused priority number in mempool mapDeltas
-      finish backporting PR9602 - test_bitcoin clean up unused param
+#     finish backporting PR9602 : remove unused priority number in mempool mapDeltas
+#     finish backporting PR9602 - test_bitcoin clean up unused param
 #     finish backporting PR9602 - remove unused and untested miner code
       finish backporting PR9602 - remove unused functional test framework code
 #     finish backporting PR9602 - remove unused modified-size computations
