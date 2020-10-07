@@ -2193,12 +2193,12 @@ XXXXX - Partial upgrade of wallet stuff
       tweak auto-unparking message
       [validation.cpp] parking-related comment tweaks
       [CMAKE] Run wallet tests as part of the check-bitcoin target
-      Merge #13862: utils: drop boost::interprocess::file_lock
+#     Merge #13862: utils: drop boost::interprocess::file_lock
       [CMAKE] Fix getentropy detection on OSX
       [CMAKE] Fix daemon() detection on OSX
       Merge #14108: tests: Add missing locking annotations and locks (g_cs_orphans)
       Temporary fix for recent build flakiness
-      Merge #13126: util: Add Clang thread safety annotations for variables guarded by cs_args
+#     Merge #13126: util: Add Clang thread safety annotations for variables guarded by cs_args
       Update manpages for 0.20.11 release
       Merge #12804: [tests] Fix intermittent rpc_net.py failure.
       Update seeds
@@ -2243,7 +2243,7 @@ XXXXX - Partial upgrade of wallet stuff
       Revert "Prevent callback overruns in InvalidateBlock and RewindBlockIndex"
       [CMAKE] Add compiler flags to some build configuration only
       [secp256k1] fix tests.c in the count == 0 case
-      Merge #13429: Return the script type from Solver
+#     Merge #13429: Return the script type from Solver
       [CI] Increase the coverage for the build-diff and build-master configs
 #     Optimization: don't add txn back to mempool after 10 invalidates
       [CI] Use ninja targets instead of calling binaries
