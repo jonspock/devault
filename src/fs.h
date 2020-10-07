@@ -26,6 +26,29 @@ namespace fs = boost::filesystem;
 /** Bridge operations to C stdio */
 namespace fsbridge {
 inline FILE *fopen(const fs::path &p, const char *mode) {   return ::fopen(p.string().c_str(), mode);}
+
+FILE *freopen(const fs::path &p, const char *mode, FILE *stream);
+
+class FileLock {
+public:
+    FileLock() = delete;
+    FileLock(const FileLock &) = delete;
+    FileLock(FileLock &&) = delete;
+    explicit FileLock(const fs::path &file);
+    ~FileLock();
+    bool TryLock();
+    std::string GetReason() { return reason; }
+
+private:
+    std::string reason;
+#ifndef WIN32
+    int fd = -1;
+#else
+    // INVALID_HANDLE_VALUE
+    void *hFile = (void *)-1;
+#endif
+};
+  
 }; // namespace fsbridge
 
 // clang-format on

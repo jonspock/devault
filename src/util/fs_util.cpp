@@ -11,7 +11,6 @@
 #include <chainparamsbase.h>
 #include <ui_interface.h>
 #include <random.h>
-#include <boost/interprocess/sync/file_lock.hpp>
 
 #ifndef WIN32
 // for posix_fallocate
@@ -426,8 +425,7 @@ void SetupEnvironment() {
  * locking, these will be held here until the global destructor cleans them up
  * and thus automatically unlocks them, or ReleaseDirectoryLocks is called.
  */
-static std::map<std::string, std::unique_ptr<boost::interprocess::file_lock>>
-    dir_locks;
+static std::map<std::string, std::unique_ptr<fsbridge::FileLock>> dir_locks;
 /** Mutex to protect dir_locks. */
 static std::mutex cs_dir_locks;
 
@@ -448,19 +446,14 @@ bool LockDirectory(const fs::path &directory, const std::string lockfile_name,
         fclose(file);
     }
 
-    try {
-        auto lock = std::make_unique<boost::interprocess::file_lock>(
-            pathLockFile.string().c_str());
-        if (!lock->try_lock()) {
-            return false;
-        }
-        if (!probe_only) {
-            // Lock successful and we're not just probing, put it into the map
-            dir_locks.emplace(pathLockFile.string(), std::move(lock));
-        }
-    } catch (const boost::interprocess::interprocess_exception &e) {
-        return error("Error while attempting to lock directory %s: %s",
-                     directory.string(), e.what());
+    auto lock = std::make_unique<fsbridge::FileLock>(pathLockFile);
+    if (!lock->TryLock()) {
+      return error("Error while attempting to lock directory %s: %s",
+                   directory.string(), lock->GetReason());
+    }
+    if (!probe_only) {
+        // Lock successful and we're not just probing, put it into the map
+      dir_locks.emplace(pathLockFile.string(), std::move(lock));
     }
     return true;
 }
@@ -488,23 +481,11 @@ bool LockDataDirectory(bool probeOnly) {
     if (file) {
         fclose(file);
     }
-
-    try {
-        static boost::interprocess::file_lock lock(
-            pathLockFile.string().c_str());
-        if (!lock.try_lock()) {
-            return InitError(
-                strprintf(_("Cannot obtain a lock on data directory %s. DeVault Core is probably already running."),
-                          strDataDir));
-        }
-        if (probeOnly) {
-            lock.unlock();
-        }
-    } catch (const boost::interprocess::interprocess_exception &e) {
-        return InitError(strprintf(_("Cannot obtain a lock on data directory "
-                                     "%s. DeVault Core is probably already running.") +
-                                       " %s.",
-                                   strDataDir, e.what()));
+    static fsbridge::FileLock lock(pathLockFile.string().c_str());
+    if (!lock.TryLock()) {
+      return InitError(
+                       strprintf(_("Cannot obtain a lock on data directory %s. DeVault Core is probably already running."),
+                                 strDataDir));
     }
     return true;
 }
@@ -574,3 +555,86 @@ fs::path AbsPathForConfigVal(const fs::path &path, bool net_specific) {
     return fs::absolute(path, GetDataDir(net_specific));
 #endif     
 }
+
+
+namespace fsbridge {
+
+#ifndef WIN32
+
+static std::string GetErrorReason() {
+    return std::strerror(errno);
+}
+
+FileLock::FileLock(const fs::path &file) {
+    fd = open(file.string().c_str(), O_RDWR);
+    if (fd == -1) {
+        reason = GetErrorReason();
+    }
+}
+
+FileLock::~FileLock() {
+    if (fd != -1) {
+        close(fd);
+    }
+}
+
+bool FileLock::TryLock() {
+    if (fd == -1) {
+        return false;
+    }
+    struct flock lock;
+    lock.l_type = F_WRLCK;
+    lock.l_whence = SEEK_SET;
+    lock.l_start = 0;
+    lock.l_len = 0;
+    if (fcntl(fd, F_SETLK, &lock) == -1) {
+        reason = GetErrorReason();
+        return false;
+    }
+    return true;
+}
+#else
+
+static std::string GetErrorReason() {
+    wchar_t *err;
+    FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM |
+                       FORMAT_MESSAGE_IGNORE_INSERTS,
+                   nullptr, GetLastError(),
+                   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+                   reinterpret_cast<WCHAR *>(&err), 0, nullptr);
+    std::wstring err_str(err);
+    LocalFree(err);
+    return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(
+        err_str);
+}
+
+FileLock::FileLock(const fs::path &file) {
+    hFile = CreateFileW(file.wstring().c_str(), GENERIC_READ | GENERIC_WRITE,
+                        FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                        nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    if (hFile == INVALID_HANDLE_VALUE) {
+        reason = GetErrorReason();
+    }
+}
+
+FileLock::~FileLock() {
+    if (hFile != INVALID_HANDLE_VALUE) {
+        CloseHandle(hFile);
+    }
+}
+
+bool FileLock::TryLock() {
+    if (hFile == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+    _OVERLAPPED overlapped = {0};
+    if (!LockFileEx(hFile, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY,
+                    0, 0, 0, &overlapped)) {
+        reason = GetErrorReason();
+        return false;
+    }
+    return true;
+}
+#endif
+
+} // namespace fsbridge
